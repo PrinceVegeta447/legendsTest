@@ -104,7 +104,11 @@ async def generate_harem_message(user, page, first_name):
         keyboard.append(nav_buttons)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    fav_character = next((c for c in user["characters"] if c["id"] == user.get("favorites", [None])[0]), None)
+    fav_character = user.get("favorites", None)
+
+# If favorites is stored as a dictionary, use the 'id' field
+      if isinstance(fav_character, dict):
+      fav_character = next((c for c in user["characters"] if c["id"] == fav_character["id"]), None)
 
     return harem_message, reply_markup, fav_character
 async def harem_callback(update: Update, context: CallbackContext) -> None:
