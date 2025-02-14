@@ -1,13 +1,34 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from itertools import groupby
 import math
-from html import escape
 import random
+from html import escape
 from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler
 from shivu import collection, banners_collection, user_collection, application, db
 
+RARITY_SYMBOLS = {
+    "⛔ Common": "⛔",
+    "🍀 Rare": "🍀",
+    "🟣 Extreme": "🟣",
+    "🟡 Sparking": "🟡",
+    "🔱 Ultimate": "🔱",
+    "👑 Supreme": "👑",
+    "🔮 Limited Edition": "🔮",
+    "⛩️ Celestial": "⛩️"
+}
+
+CATEGORY_SYMBOLS = {
+    "🏆 Saiyan": "🏆", "🔥 Hybrid Saiyan": "🔥", "🤖 Android": "🤖",
+    "❄️ Frieza Force": "❄️", "✨ God Ki": "✨", "💪 Super Warrior": "💪",
+    "🩸 Regeneration": "🩸", "🔀 Fusion Warrior": "🔀", "🤝 Duo": "🤝",
+    "🔱 Super Saiyan God SS": "🔱", "🗿 Ultra Instinct Sign": "🗿",
+    "⚡ Super Saiyan": "⚡", "❤️‍🔥 Dragon Ball Saga": "❤️‍🔥",
+    "💫 Majin Buu Saga": "💫", "👾 Cell Saga": "👾", "📽️ Sagas From the Movies": "📽️",
+    "☠️ Lineage Of Evil": "☠️", "🌏 Universe Survival Saga": "🌏"
+}
+
 async def harem(update: Update, context: CallbackContext, page=0) -> None:
-    """Shows the user's collected characters (including banner characters) with sorting and pagination."""
+    """Shows the user's collected characters with sorting and pagination."""
     user_id = update.effective_user.id
     user = await user_collection.find_one({'id': user_id})
 
@@ -23,13 +44,12 @@ async def harem(update: Update, context: CallbackContext, page=0) -> None:
     user_pref = await db.user_sorting.find_one({'user_id': user_id}) or {"sort_by": "category"}  
     sort_by = user_pref["sort_by"]  
 
-    # Fetch banner-exclusive characters collected by the user  
+    # Fetch banner-exclusive characters  
     banner_characters = []
     for banner in await banners_collection.find({}).to_list(length=None):  
         if 'characters' in banner:  
             for char in banner['characters']:  
-                if char['id'] in [c['id'] for c in user['characters']]:  # If user owns this banner character  
-                
+                if char['id'] in [c['id'] for c in user['characters']]:  
                     banner_characters.append(char)  
 
     # Merge all collected characters  
@@ -41,7 +61,7 @@ async def harem(update: Update, context: CallbackContext, page=0) -> None:
     else:  
         all_characters = sorted(all_characters, key=lambda x: x.get('category', "Uncategorized"))  
 
-    # Group by ID to count duplicates  
+    # Count duplicates  
     character_counts = {k: len(list(v)) for k, v in groupby(all_characters, key=lambda x: x['id'])}  
     unique_characters = list({char['id']: char for char in all_characters}.values())  
 
@@ -49,10 +69,10 @@ async def harem(update: Update, context: CallbackContext, page=0) -> None:
     total_pages = math.ceil(len(unique_characters) / 15)  
     page = max(0, min(page, total_pages - 1))  
 
-    # Message header  
+    # Header  
     harem_message = (
-        f"🎴 **{escape(update.effective_user.first_name)}'s Collection**\n"
-        f"📖 **Page {page + 1}/{total_pages}** (Sorted by `{sort_by.capitalize()}`)\n"
+        f"🎴 <b>{escape(update.effective_user.first_name)}'s Collection</b>\n"
+        f"📖 <b>Page {page + 1}/{total_pages}</b> (Sorted by <i>{sort_by.capitalize()}</i>)\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
     )
 
@@ -63,10 +83,12 @@ async def harem(update: Update, context: CallbackContext, page=0) -> None:
     # Display character info  
     for key, characters in grouped_characters.items():  
         total_in_category = await collection.count_documents({sort_by: key})  
-        harem_message += f'\n<b>{key} {len(characters)}/{total_in_category}</b>\n'  
+        category_icon = CATEGORY_SYMBOLS.get(key, "")  
+        harem_message += f'\n<b>{category_icon} {key} ({len(characters)}/{total_in_category})</b>\n'  
         for character in characters:  
             count = character_counts[character['id']]  
-            harem_message += f'{character["id"]} {character["name"]} ×{count}\n'  
+            rarity_icon = RARITY_SYMBOLS.get(character['rarity'], "❓")  
+            harem_message += f'{rarity_icon} {character["name"]} ×{count}\n'  
 
     # Buttons  
     keyboard = [[InlineKeyboardButton(f"📜 See Collection ({len(all_characters)})", switch_inline_query_current_chat=f"collection.{user_id}")]]  
@@ -80,28 +102,28 @@ async def harem(update: Update, context: CallbackContext, page=0) -> None:
 
     reply_markup = InlineKeyboardMarkup(keyboard)  
 
-    # Display favorite character (or random if none)  
+    # Get message reference  
+    message = update.message if update.message else update.callback_query.message
+
+    # Display favorite character (or fallback)  
     fav_character = None  
     if 'favorites' in user and user['favorites']:  
         fav_character_id = user['favorites'][0]  
         fav_character = next((c for c in all_characters if c['id'] == fav_character_id), None)  
-
-    # ✅ Fix: Use `callback_query.message` if inside a callback
-    message = update.message if update.message else update.callback_query.message
 
     # Send image if available  
     if fav_character and 'file_id' in fav_character:  
         await message.reply_photo(photo=fav_character['file_id'], parse_mode='HTML', caption=harem_message, reply_markup=reply_markup)
         return  
 
-    # If no favorite, send a random character  
+    # Send a random character if no favorite  
     if all_characters:  
         random_character = random.choice(all_characters)
         if 'file_id' in random_character:  
             await message.reply_photo(photo=random_character['file_id'], parse_mode='HTML', caption=harem_message, reply_markup=reply_markup)
             return  
 
-    # Send text message if no image available  
+    # Send text message if no image  
     await message.edit_text(harem_message, parse_mode='HTML', reply_markup=reply_markup)
 
 async def harem_callback(update: Update, context: CallbackContext) -> None:
@@ -115,10 +137,8 @@ async def harem_callback(update: Update, context: CallbackContext) -> None:
         await query.answer("❌ This is not your Collection!", show_alert=True)  
         return  
 
-    # Edit the existing message instead of sending a new one
-    message = query.message
+    # Edit the existing message  
     await harem(update, context, page)
-
 
 async def sort_collection(update: Update, context: CallbackContext) -> None:
     """Allows users to choose sorting method."""
