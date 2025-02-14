@@ -268,8 +268,6 @@ async def guess(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("❌ Incorrect character name. Try again!")
 
 
-  
-
 async def fav(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
 
@@ -279,28 +277,28 @@ async def fav(update: Update, context: CallbackContext) -> None:
 
     character_id = context.args[0]
 
-    # Fetch user data
     user = await user_collection.find_one({'id': user_id})
     if not user:
         await update.message.reply_text('You have not guessed any characters yet...')
         return
 
-    # Find the character in the user's collection
     character = next((c for c in user['characters'] if c['id'] == character_id), None)
     if not character:
         await update.message.reply_text('This character is not in your collection.')
         return
 
-    # Ensure the character has a file_id
+    # Ensure character has a file_id before adding to favorites
     if "file_id" not in character:
         await update.message.reply_text('⚠️ This character has no image stored. Try re-uploading it.')
         return
 
-    # Store the entire favorite character data
+    # ✅ Store the full character data in favorites
     user['favorites'] = {
         'id': character_id,
         'name': character['name'],
-        'file_id': character['file_id']  # Save file_id in favorites
+        'file_id': character['file_id'],  # Storing file_id for harem.py to use
+        'rarity': character.get('rarity', 'Unknown'),
+        'category': character.get('category', 'Unknown')
     }
 
     # Update user data in the database
