@@ -57,6 +57,7 @@ async def harem(update: Update, context: CallbackContext, page=0, query=None) ->
         else:
             await update.message.reply_text(harem_message, parse_mode="HTML", reply_markup=reply_markup)
 
+
 async def generate_harem_message(user, page, first_name):
     """Generates harem message and inline keyboard for pagination."""
     user_id = user['id']
@@ -106,11 +107,13 @@ async def generate_harem_message(user, page, first_name):
     reply_markup = InlineKeyboardMarkup(keyboard)
     fav_character = user.get("favorites", None)
 
-# If favorites is stored as a dictionary, use the 'id' field
-      if isinstance(fav_character, dict):
-      fav_character = next((c for c in user["characters"] if c["id"] == fav_character["id"]), None)
+    # ✅ Fixed Indentation
+    if isinstance(fav_character, dict):
+        fav_character = next((c for c in user["characters"] if c["id"] == fav_character["id"]), None)
 
     return harem_message, reply_markup, fav_character
+
+
 async def harem_callback(update: Update, context: CallbackContext) -> None:
     """Handles pagination properly without sending a new message."""
     query = update.callback_query
