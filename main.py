@@ -273,33 +273,41 @@ async def guess(update: Update, context: CallbackContext) -> None:
 async def fav(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
 
-    
     if not context.args:
-        await update.message.reply_text('Please provide Character id...')
+        await update.message.reply_text('Please provide a Character ID...')
         return
 
     character_id = context.args[0]
 
-    
+    # Fetch user data
     user = await user_collection.find_one({'id': user_id})
     if not user:
-        await update.message.reply_text('You have not Guessed any characters yet....')
+        await update.message.reply_text('You have not guessed any characters yet...')
         return
 
-
+    # Find the character in the user's collection
     character = next((c for c in user['characters'] if c['id'] == character_id), None)
     if not character:
-        await update.message.reply_text('This Character is Not In your collection')
+        await update.message.reply_text('This character is not in your collection.')
         return
 
-    
-    user['favorites'] = [character_id]
+    # Ensure the character has a file_id
+    if "file_id" not in character:
+        await update.message.reply_text('⚠️ This character has no image stored. Try re-uploading it.')
+        return
 
-    
+    # Store the entire favorite character data
+    user['favorites'] = {
+        'id': character_id,
+        'name': character['name'],
+        'file_id': character['file_id']  # Save file_id in favorites
+    }
+
+    # Update user data in the database
     await user_collection.update_one({'id': user_id}, {'$set': {'favorites': user['favorites']}})
 
-    await update.message.reply_text(f'Character {character["name"]} has been added to your favorite...')
-    
+    await update.message.reply_text(f'⭐ {character["name"]} has been added to your favorites!')
+
 
 
 
