@@ -8,7 +8,7 @@ from shivu import application, user_collection, collection
 # 📌 Claim Limits
 MAX_CLAIMS = 1  # Users can claim once per day
 COOLDOWN_TIME = 24 * 60 * 60  # 24 hours cooldown
-GIF_FILE_ID = "BQACAgUAAyEFAASS4tX2AAID1mepm3uPxHquFb9fbSrmnbKjhGqYAAK3FAAC1ftIVUrVTH-TVNlXNgQ"
+GIF_FILE_ID = "BAACAgUAAyEFAASFUB9IAAIQAAFnsKpbDDyBb9emePMuEFN7gugV2QACIhMAApS5iFUcNzRBeFCYwTYE"
 
 async def claim(update: Update, context: CallbackContext) -> None:
     """Allows users to claim a random character from the database."""
