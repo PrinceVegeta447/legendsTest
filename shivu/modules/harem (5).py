@@ -5,18 +5,7 @@ from html import escape
 import math
 from shivu import collection, user_collection, application, db
 
-DEFAULT_SORT = "rarity"  # Default sorting is now always Rarity
-
-RARITY_ICONS = {
-    "⛔ Common": "⛔",
-    "🍀 Rare": "🍀",
-    "🟣 Extreme": "🟣",
-    "🟡 Sparking": "🟡",
-    "🔮 Limited Edition": "🔮",
-    "🔱 Ultimate": "🔱",
-    "👑 Supreme": "👑",
-    "⛩️ Celestial": "⛩️"
-}
+DEFAULT_SORT = "rarity"  # Default sorting is now Rarity
 
 CATEGORY_ICONS = {
     "🏆 Saiyan": "🏆", "🔥 Hybrid Saiyan": "🔥", "🤖 Android": "🤖",
@@ -28,7 +17,16 @@ CATEGORY_ICONS = {
     "☠️ Lineage Of Evil": "☠️", "🌏 Universe Survival Saga": "🌏"
 }
 
-SORT_OPTIONS = ["rarity", "category"]  # Sort options
+RARITY_ICONS = {
+    "⛔ Common": "⛔",
+    "🍀 Rare": "🍀",
+    "🟣 Extreme": "🟣",
+    "🟡 Sparking": "🟡",
+    "🔱 Ultimate": "🔱",
+    "👑 Supreme": "👑",
+    "🔮 Limited Edition": "🔮",
+    "⛩️ Celestial": "⛩️"
+}
 
 async def harem(update: Update, context: CallbackContext, page=0, query=None) -> None:
     """Displays user's character collection with proper pagination."""
@@ -70,27 +68,30 @@ async def generate_harem_message(user, page, first_name):
     total_pages = max(1, math.ceil(len(unique_characters) / 10))
     page = max(0, min(page, total_pages - 1))
 
+    # ✅ Display first name instead of full name
     harem_message = (
         f"📜 <b>{first_name}'s Collection</b>\n"
         f"📄 <b>Page {page+1}/{total_pages}</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
     )
 
-    grouped_characters = {k: list(v) for k, v in groupby(unique_characters, key=lambda x: x.get(sort_by, "Unknown"))}
+    current_characters = unique_characters[page * 10 : (page + 1) * 10]
+    grouped_characters = {k: list(v) for k, v in groupby(current_characters, key=lambda x: x.get(sort_by, "Unknown"))}
 
-    for rarity, characters in sorted(grouped_characters.items(), key=lambda x: list(RARITY_ICONS.keys()).index(x[0])):
-        rarity_icon = RARITY_ICONS.get(rarity, "🔹")
-        total_available = await collection.count_documents({"rarity": rarity})
-        harem_message += f"\n🫧 {rarity_icon} <b>{rarity}</b> ({len(characters)}/{total_available})\n\n"
+    for category, characters in grouped_characters.items():
+        owned_count = len(characters)
+        total_count = await collection.count_documents({sort_by: category}) or 1  # Prevent division by zero
+
+        harem_message += f"\n🫧 <b>{RARITY_ICONS.get(category, '')} {category}</b> ({owned_count}/{total_count})\n\n"
 
         for character in characters:
             count = character_counts[character["id"]]
-            harem_message += f"[{character['id']}] {character['name']}  [×{count}]\n"
+            rarity_icon = RARITY_ICONS.get(character["rarity"], "🔹")
+            harem_message += f"[{character['id']}] {rarity_icon} {character['name']}  [×{count}]\n"
 
     total_count = len(user['characters'])
     keyboard = [
-        [InlineKeyboardButton(f"📜 See Collection ({total_count})", switch_inline_query_current_chat=f"collection.{user_id}")],
-        [InlineKeyboardButton("🔄 Change Sort", callback_data="sort_menu")]
+        [InlineKeyboardButton(f"📜 See Collection ({total_count})", switch_inline_query_current_chat=f"collection.{user_id}")]
     ]
 
     if total_pages > 1:
@@ -127,37 +128,28 @@ async def harem_callback(update: Update, context: CallbackContext) -> None:
     await harem(update, context, page=page, query=query)
 
 async def sort_command(update: Update, context: CallbackContext) -> None:
-    """Sends an inline keyboard for sorting selection."""
+    """Sends sorting options."""
     keyboard = [
-        [InlineKeyboardButton(f"{RARITY_ICONS['⛔ Common']} Sort by Rarity", callback_data="sort:rarity")],
-        [InlineKeyboardButton("📂 Sort by Category", callback_data="sort:category")]
+        [InlineKeyboardButton("📌 Sort by Rarity", callback_data="sort:rarity")],
+        [InlineKeyboardButton("📂 Sort by Category", callback_data="sort:category")],
+        [InlineKeyboardButton("🔤 Sort Alphabetically", callback_data="sort:name")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🔄 <b>Select a sorting method:</b>", reply_markup=reply_markup, parse_mode="HTML")
+    await update.message.reply_text("🔀 Choose how you want to sort your collection:", reply_markup=reply_markup)
 
 async def sort_callback(update: Update, context: CallbackContext) -> None:
     """Handles sorting preference and saves it in the database."""
     query = update.callback_query
-    data = query.data
-
-    if data == "sort_menu":
-        await sort_command(update, context)
-        return
-
-    _, sort_by = data.split(":")
+    _, sort_by = query.data.split(":")
     user_id = query.from_user.id
-
-    if sort_by not in SORT_OPTIONS:
-        await query.answer("❌ Invalid sorting option!", show_alert=True)
-        return
 
     await db.user_sorting.update_one({"user_id": user_id}, {"$set": {"sort_by": sort_by}}, upsert=True)
 
-    await query.answer(f"✅ Collection will now be sorted by {sort_by.capitalize()}")
-    await harem(update, context, query=query)
+    await query.answer(f"✅ Collection will now be sorted by {sort_by.capitalize()}!")
+    await query.edit_message_text(f"✅ Collection is now sorted by **{sort_by.capitalize()}**. Use /collection to view.")
 
 # ✅ Register Handlers
 application.add_handler(CommandHandler(["harem", "collection"], harem, block=False))
-application.add_handler(CommandHandler("sort", sort_command, block=False))
 application.add_handler(CallbackQueryHandler(harem_callback, pattern="^harem", block=False))
-application.add_handler(CallbackQueryHandler(sort_callback, pattern="^sort", block=False))
+application.add_handler(CommandHandler("sort", sort_command, block=False))
+application.add_handler(CallbackQueryHandler(sort_callback, pattern="^sort:", block=False))
