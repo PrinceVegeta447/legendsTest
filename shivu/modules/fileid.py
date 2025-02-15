@@ -2,8 +2,11 @@ from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, OWNER_ID, sudo_users
 
-async def get_file_id_cmd(update: Update, context: CallbackContext) -> None:
-    """Extracts both temporary and permanent file_id from a replied image, video, or document."""
+# ✅ Your Channel ID (Make sure the bot is an admin there)
+CHANNEL_ID = -1002396392630  
+
+async def get_permanent_file_id(update: Update, context: CallbackContext) -> None:
+    """Forwards media to the channel and returns its permanent file_id."""
     user_id = update.effective_user.id
 
     # ✅ Check permissions
@@ -16,41 +19,47 @@ async def get_file_id_cmd(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("❌ Reply to an image, video, or document with `/fileid` to extract the file_id!")
         return
 
-    # ✅ Extract file_id & unique_file_id based on media type
     replied_msg = update.message.reply_to_message
-    file_type = None
-    file_id = None
-    unique_file_id = None
 
+    # ✅ Forward the media to the private channel
+    forwarded_msg = None
     if replied_msg.photo:
-        file_id = replied_msg.photo[-1].file_id
-        unique_file_id = replied_msg.photo[-1].file_unique_id
+        forwarded_msg = await replied_msg.forward(chat_id=CHANNEL_ID)
         file_type = "🖼 Photo"
     elif replied_msg.video:
-        file_id = replied_msg.video.file_id
-        unique_file_id = replied_msg.video.file_unique_id
+        forwarded_msg = await replied_msg.forward(chat_id=CHANNEL_ID)
         file_type = "🎥 Video"
     elif replied_msg.document:
-        file_id = replied_msg.document.file_id
-        unique_file_id = replied_msg.document.file_unique_id
+        forwarded_msg = await replied_msg.forward(chat_id=CHANNEL_ID)
         file_type = "📄 Document"
     elif replied_msg.animation:
-        file_id = replied_msg.animation.file_id
-        unique_file_id = replied_msg.animation.file_unique_id
+        forwarded_msg = await replied_msg.forward(chat_id=CHANNEL_ID)
         file_type = "🎞 GIF"
     else:
         await update.message.reply_text("❌ No supported media found! Reply to an image, video, or document.")
         return
 
-    # ✅ Send formatted response
+    # ✅ Extract the permanent file ID from the forwarded message
+    if forwarded_msg.photo:
+        file_id = forwarded_msg.photo[-1].file_id
+    elif forwarded_msg.video:
+        file_id = forwarded_msg.video.file_id
+    elif forwarded_msg.document:
+        file_id = forwarded_msg.document.file_id
+    elif forwarded_msg.animation:
+        file_id = forwarded_msg.animation.file_id
+    else:
+        await update.message.reply_text("❌ Failed to retrieve the file ID.")
+        return
+
+    # ✅ Send the permanent file ID to the user
     await update.message.reply_text(
-        f"✅ **Extracted File ID**\n\n"
+        f"✅ **Extracted Permanent File ID**\n\n"
         f"📌 **Type:** {file_type}\n"
-        f"📂 **Temporary File ID:** `{file_id}`\n"
-        f"📂 **Permanent File ID:** `{unique_file_id}`\n\n"
-        f"🔹 **Use Unique File ID to prevent issues!**",
+        f"📂 **Permanent File ID:** `{file_id}`\n\n"
+        f"🔹 **This ID won't expire. Use it for reliable uploads!**",
         parse_mode="Markdown"
     )
 
-# ✅ Add Handler
-application.add_handler(CommandHandler("fileid", get_file_id_cmd, block=False))
+# ✅ Add Command Handler
+application.add_handler(CommandHandler("fileid", get_permanent_file_id, block=False))
