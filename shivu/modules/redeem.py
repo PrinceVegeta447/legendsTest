@@ -4,6 +4,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, user_collection, db, OWNER_ID, sudo_users, collection, redeem_codes_collection, expired_codes_collection
 
+redeem_codes = db.redeem_codes  # Collection for active redeem codes
+expired_codes = db.expired_codes  # Collection for expired codes
+
+
 # ✅ Valid Rarities
 RARITIES = ["⛔ Common", "🍀 Rare", "🟡 Sparking", "🔱 Ultimate", "🔮 Limited Edition"]
 
