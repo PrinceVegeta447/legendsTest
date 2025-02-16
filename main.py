@@ -168,10 +168,12 @@ REWARD_TABLE = {
     "🟡 Sparking": (400, 600, 7, 12),
     "🔮 Limited Edition": (500, 800, 10, 15),
     "🔱 Ultimate": (750, 1200, 15, 20),
-    "👑 Supreme": (800, 1300, 20, 25),
-    "⛩️ Celestial": (1000, 1500, 25, 30)
+    "👑 Supreme": (800, 1300, 30, 35),
+    "⛩️ Celestial": (1250, 1500, 40, 50)
 }
-
+# ✅ Store last dropped character per chat
+last_characters = {}
+first_correct_guesses = {}
 
 async def guess(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_chat.id
@@ -196,7 +198,7 @@ async def guess(update: Update, context: CallbackContext) -> None:
         return
 
     # ✅ Extract user's guess
-    guess_text = ' '.join(context.args).lower() if context.args else ''
+    guess_text = ' '.join(context.args).strip().lower() if context.args else ''
     if not guess_text:
         await update.message.reply_text("❌ Please provide a character name.")
         return
@@ -205,19 +207,23 @@ async def guess(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("❌ Invalid characters in guess.")
         return
 
+    # ✅ Restrict Supreme & Celestial from guessing
+    if character_rarity in RESTRICTED_RARITIES:
+        await update.message.reply_text(f"❌ You cannot guess {character_rarity} rarity characters!")
+        return
+
     # ✅ Check if the guessed name matches
     name_parts = character_name.split()
-    if sorted(name_parts) == sorted(guess_text.split()) or any(part == guess_text for part in name_parts):
+    guess_parts = guess_text.split()
+    correct_guess = sorted(name_parts) == sorted(guess_parts) or any(part == guess_text for part in name_parts)
+
+    if correct_guess:
         first_correct_guesses[chat_id] = dropped_character['id']  # ✅ Mark character as guessed
 
         # ✅ Assign rewards based on rarity
-        if character_rarity in REWARD_TABLE:
-            coin_min, coin_max, cc_min, cc_max = REWARD_TABLE[character_rarity]
-            coins_won = random.randint(coin_min, coin_max)
-            chrono_crystals_won = random.randint(cc_min, cc_max)
-        else:
-            coins_won = random.randint(100, 200)  # Default fallback
-            chrono_crystals_won = random.randint(1, 5)
+        reward = REWARD_TABLE.get(character_rarity, (100, 200, 1, 5))  # Default fallback if rarity missing
+        coins_won = random.randint(reward[0], reward[1])
+        chrono_crystals_won = random.randint(reward[2], reward[3])
 
         # ✅ Update user collection
         user = await user_collection.find_one({'id': user_id})
@@ -259,21 +265,20 @@ async def guess(update: Update, context: CallbackContext) -> None:
         # ✅ Send success message
         keyboard = [[InlineKeyboardButton("See Collection", switch_inline_query_current_chat=f"collection.{user_id}")]]
         await update.message.reply_text(
-            f'<b><a href="tg://user?id={user_id}">{escape(update.effective_user.first_name)}</a></b> You guessed a new character! ✅️\n\n'
+            f'🎉 <b><a href="tg://user?id={user_id}">{escape(update.effective_user.first_name)}</a> guessed correctly! ✅</b>\n\n'
             f'🆔 <b>Name:</b> {dropped_character["name"]}\n'
-            f'🔹 <b>Category:</b> {dropped_character["category"]}\n'
-            f'🎖 <b>Rarity:</b> {dropped_character["rarity"]}\n\n'
+            f'🎖 <b>Rarity:</b> {dropped_character["rarity"]}\n'
+            f'🔹 <b>Category:</b> {dropped_character["category"]}\n\n'
             f'🏆 <b>Rewards:</b>\n'
             f'💰 <b>Zeni:</b> {coins_won}\n'
             f'💎 <b>Chrono Crystals:</b> {chrono_crystals_won}\n\n'
-            f'This character has been added to your collection. Use /collection to see your collection!',
+            f'🎴 Use /collection to see your collection!',
             parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
     else:
         await update.message.reply_text("❌ Incorrect character name. Try again!")
-
 
 async def fav(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
