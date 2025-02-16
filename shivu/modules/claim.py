@@ -12,6 +12,9 @@ SUPPORT_GROUP_ID = -1002483506913  # Replace with actual group ID
 SUPPORT_GROUP_LINK = "https://t.me/CollectYourLegends"  # Replace with actual group link
 GIF_FILE_ID = "BAACAgUAAyEFAASFUB9IAAIQAAFnsKpbDDyBb9emePMuEFN7gugV2QACIhMAApS5iFUcNzRBeFCYwTYE"
 
+# 🚫 **Rarities NOT allowed in `/claim`**
+FORBIDDEN_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
+
 async def claim(update: Update, context: CallbackContext) -> None:
     """Allows users to claim a random character if they are in the support group."""
     user_id = update.effective_user.id
@@ -66,13 +69,17 @@ async def claim(update: Update, context: CallbackContext) -> None:
         )
         return
 
-    # ✅ Fetch a random character from the database
-    total_characters = await collection.count_documents({})
-    if total_characters == 0:
-        await update.message.reply_text("❌ No characters available to claim!")
-        return
+    # ✅ Fetch a valid character (Exclude Forbidden Rarities)
+    while True:
+        total_characters = await collection.count_documents({})
+        if total_characters == 0:
+            await update.message.reply_text("❌ No characters available to claim!")
+            return
 
-    random_character = await collection.find_one({}, skip=random.randint(0, total_characters - 1))
+        random_character = await collection.find_one({}, skip=random.randint(0, total_characters - 1))
+
+        if random_character and random_character["rarity"] not in FORBIDDEN_RARITIES:
+            break  # Found a valid character
 
     # ✅ Send GIF animation
     gif_message = await update.message.reply_animation(animation=GIF_FILE_ID, caption="✨ Claiming a character...")
