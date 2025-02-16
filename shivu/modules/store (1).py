@@ -10,9 +10,9 @@ MAX_STORE_ITEMS = 5
 # Fixed Prices for Rarity
 RARITY_PRICES = {
     "🟡 Sparking": 600,
-    "🔱 Ultimate": 2500,
-    "👑 Supreme": 10000, 
-    "⛩️ Celestial": 5000,
+    "🔱 Ultimate": 5400,
+    "👑 Supreme": 16200, 
+    "⛩️ Celestial": 48600,
     "🔮 Limited Edition": 1800
 }
 
@@ -30,7 +30,7 @@ async def refresh_store():
     ]).to_list(None)
 
     for char in characters:
-        char["stock"] = random.randint(1, 4)
+        char["stock"] = random.randint(1, 3)
         char["price"] = RARITY_PRICES.get(char["rarity"], 1000)
         char["in_store"] = True
         await collection.update_one({"_id": char["_id"]}, {"$set": char})
