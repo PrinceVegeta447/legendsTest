@@ -106,14 +106,24 @@ async def message_counter(update: Update, context: CallbackContext) -> None:
             await send_image(update, context)  # Call send_image properly
             message_counts[chat_id] = 0  # Reset counter
 
-RESTRICTED_RARITIES = ["🔱 Ultimate","👑 Supreme", "🔮 Limited Edition", "⛩️ Celestial"]
+
+RESTRICTED_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
+
+# ✅ Set Drop Rates (as percentages)
+DROP_RATES = {
+    "⛔ Common": 40,
+    "🍀 Rare": 30,
+    "🟡 Sparking": 24,
+    "🔮 Limited Edition": 5,
+    "🔱 Ultimate": 1
+}
 
 async def send_image(update: Update, context: CallbackContext) -> None:
     """Drops a character when the message frequency is reached."""
     chat_id = update.effective_chat.id
 
-    # ✅ Fetch all characters (excluding restricted rarities)
-    all_characters = list(await collection.find({"rarity": {"$nin": RESTRICTED_RARITIES}}).to_list(length=None))
+    # ✅ Fetch all valid characters (excluding restricted rarities)
+    all_characters = await collection.find({"rarity": {"$nin": RESTRICTED_RARITIES}}).to_list(length=None)
 
     if not all_characters:
         print(f"❌ [DEBUG] No valid characters found for dropping in {chat_id}!")
@@ -129,13 +139,24 @@ async def send_image(update: Update, context: CallbackContext) -> None:
         sent_characters[chat_id] = []  # Reset tracking
         available_characters = all_characters  # Refill with all valid characters
 
-    # ✅ Select a **random character**
-    character = random.choice(available_characters)
+    # ✅ Apply drop rate logic
+    weighted_pool = []
+    for char in available_characters:
+        rarity = char["rarity"]
+        weight = DROP_RATES.get(rarity, 1)  # Default weight 1 if not listed
+        weighted_pool.extend([char] * weight)  # Duplicate based on weight
+
+    if not weighted_pool:
+        print(f"❌ [DEBUG] Weighted pool is empty in {chat_id}!")
+        return
+
+    # ✅ Select a **random character** from the weighted pool
+    character = random.choice(weighted_pool)
     sent_characters[chat_id].append(character['id'])
-    last_characters[chat_id] = character
+    last_characters[chat_id] = character  # ✅ Keep track of the last dropped character
 
     # ✅ Use **file_id** instead of image URL
-    file_id = character.get('file_id', None)
+    file_id = character.get("file_id", None)
     if not file_id:
         print(f"❌ [DEBUG] Missing `file_id` for {character['name']} | Skipping drop...")
         return  # Skip if no file_id is present
@@ -145,9 +166,10 @@ async def send_image(update: Update, context: CallbackContext) -> None:
         chat_id=chat_id,
         photo=file_id,
         caption=(
-            "🔥 A Character Has Appeared!🔥\n\n" 
- "⚡ Be the first to /collect them!"),
-        parse_mode='Markdown'
+            "🔥 A Character Has Appeared!🔥\n\n"
+            "⚡ Be the first to /collect them!"
+        ),
+        parse_mode="Markdown"
     )
 
     print(f"✅ [DEBUG] Character Dropped in {chat_id}: {character['name']}")
