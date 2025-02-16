@@ -111,7 +111,7 @@ RESTRICTED_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
 DROP_RATES = {
     "⛔ Common": 40,  # 40% Chance
     "🍀 Rare": 30,  # 30% Chance
-    "🟡 Sparking": 23,  # 23% Chance
+    "🟡 Sparking": 24,  # 23% Chance
     "🔮 Limited Edition": 5,  # 5% Chance
     "🔱 Ultimate": 1,  # 1% Chance
 }
