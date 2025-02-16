@@ -122,7 +122,7 @@ RARITY_ICONS = {
 }
 
 @shivuu.on_message(filters.command("gift"))
-async def gift(update: Update, context: CallbackContext) -> None:
+async def gift(client, message) -> None:
     """Allows users to gift a character to another user."""
     sender_id = update.effective_user.id
 
