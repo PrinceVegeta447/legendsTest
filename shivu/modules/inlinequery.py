@@ -13,13 +13,13 @@ from shivu import user_collection, collection, application, db
 
 # collection
 db.characters.create_index([('id', ASCENDING)])
-db.characters.create_index([('anime', ASCENDING)])
-db.characters.create_index([('img_url', ASCENDING)])
+db.characters.create_index([('category', ASCENDING)])
+db.characters.create_index([('file_id', ASCENDING)])
 
 # user_collection
 db.user_collection.create_index([('characters.id', ASCENDING)])
 db.user_collection.create_index([('characters.name', ASCENDING)])
-db.user_collection.create_index([('characters.img_url', ASCENDING)])
+db.user_collection.create_index([('characters.file_id', ASCENDING)])
 
 all_characters_cache = TTLCache(maxsize=10000, ttl=36000)
 user_collection_cache = TTLCache(maxsize=10000, ttl=60)
@@ -49,7 +49,7 @@ async def inlinequery(update: Update, context: CallbackContext) -> None:
     else:
         if query:
             regex = re.compile(query, re.IGNORECASE)
-            all_characters = list(await collection.find({"$or": [{"name": regex}, {"anime": regex}]}).to_list(length=None))
+            all_characters = list(await collection.find({"$or": [{"name": regex}, {"category": regex}]}).to_list(length=None))
         else:
             if 'all_characters' in all_characters_cache:
                 all_characters = all_characters_cache['all_characters']
@@ -67,19 +67,19 @@ async def inlinequery(update: Update, context: CallbackContext) -> None:
     results = []
     for character in characters:
         global_count = await user_collection.count_documents({'characters.id': character['id']})
-        anime_characters = await collection.count_documents({'anime': character['anime']})
+        anime_characters = await collection.count_documents({'category': character['category']})
 
         if query.startswith('collection.'):
             user_character_count = sum(c['id'] == character['id'] for c in user['characters'])
-            user_anime_characters = sum(c['anime'] == character['anime'] for c in user['characters'])
-            caption = f"<b> Look At <a href='tg://user?id={user['id']}'>{(escape(user.get('first_name', user['id'])))}</a>'s Character</b>\n\n🌸: <b>{character['name']} (x{user_character_count})</b>\n🏖️: <b>{character['anime']} ({user_anime_characters}/{anime_characters})</b>\n<b>{character['rarity']}</b>\n\n<b>🆔️:</b> {character['id']}"
+            user_anime_characters = sum(c['anime'] == character['category'] for c in user['characters'])
+            caption = f"<b> Look At <a href='tg://user?id={user['id']}'>{(escape(user.get('first_name', user['id'])))}</a>'s Character</b>\n\n⚡: <b>{character['name']} (x{user_character_count})</b>\n🫧: <b>{character['category']} ({user_anime_characters}/{anime_characters})</b>\n<b>{character['rarity']}</b>\n\n<b>🆔️:</b> {character['id']}"
         else:
-            caption = f"<b>Look At This Character !!</b>\n\n🌸:<b> {character['name']}</b>\n🏖️: <b>{character['anime']}</b>\n<b>{character['rarity']}</b>\n🆔️: <b>{character['id']}</b>\n\n<b>Globally Guessed {global_count} Times...</b>"
+            caption = f"<b>Look At This Character !!</b>\n\n⚡:<b> {character['name']}</b>\n🫧: <b>{character['category']}</b>\n<b>{character['rarity']}</b>\n🆔️: <b>{character['id']}</b>\n\n<b>Globally Guessed {global_count} Times...</b>"
         results.append(
             InlineQueryResultPhoto(
-                thumbnail_url=character['img_url'],
+                thumbnail_url=character['file_id'],
                 id=f"{character['id']}_{time.time()}",
-                photo_url=character['img_url'],
+                photo_url=character['file_id'],
                 caption=caption,
                 parse_mode='HTML'
             )
