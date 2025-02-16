@@ -1,18 +1,37 @@
 import asyncio
 import time
 import random
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, user_collection, collection
 
-# 📌 Claim Limits
+# 📌 Claim Settings
 MAX_CLAIMS = 1  # Users can claim once per day
-COOLDOWN_TIME = 24 * 60 * 60  # 24 hours cooldown
+COOLDOWN_TIME = 24 * 60 * 60  # 24-hour cooldown
+SUPPORT_GROUP_ID = -1002483506913  # Replace with actual group ID
+SUPPORT_GROUP_LINK = "https://t.me/CollectYourLegends"  # Replace with actual group link
 GIF_FILE_ID = "BAACAgUAAyEFAASFUB9IAAIQAAFnsKpbDDyBb9emePMuEFN7gugV2QACIhMAApS5iFUcNzRBeFCYwTYE"
 
 async def claim(update: Update, context: CallbackContext) -> None:
-    """Allows users to claim a random character from the database."""
+    """Allows users to claim a random character if they are in the support group."""
     user_id = update.effective_user.id
+
+    # ✅ Check if user is in support group
+    try:
+        chat_member = await context.bot.get_chat_member(SUPPORT_GROUP_ID, user_id)
+        if chat_member.status not in ["member", "administrator", "creator"]:
+            raise Exception  # Not a member
+    except:
+        # ✅ Send Inline Button to Join Group
+        keyboard = [[InlineKeyboardButton("🔹 Join Our Group", url=SUPPORT_GROUP_LINK)]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(
+            "❌ You must join the Group to claim a character!\n"
+            "🔹 Click the button below to join and try again.",
+            reply_markup=reply_markup
+        )
+        return
 
     # ✅ Fetch or Register User in Database
     user = await user_collection.find_one({"id": user_id})
@@ -35,15 +54,16 @@ async def claim(update: Update, context: CallbackContext) -> None:
     current_time = time.time()
 
     # ✅ **Check Claim Limits**
-    if claims >= MAX_CLAIMS:
-        await update.message.reply_text("❌ You have already claimed today. Try again tomorrow!")
-        return
-
     cooldown_remaining = COOLDOWN_TIME - (current_time - last_claim)
-    if cooldown_remaining > 0:
+
+    if claims >= MAX_CLAIMS or cooldown_remaining > 0:
         hours = int(cooldown_remaining // 3600)
         minutes = int((cooldown_remaining % 3600) // 60)
-        await update.message.reply_text(f"⏳ You must wait {hours}h {minutes}m before claiming again!")
+        seconds = int(cooldown_remaining % 60)
+
+        await update.message.reply_text(
+            f"⏳ You can claim again in {hours}h {minutes}m {seconds}s!"
+        )
         return
 
     # ✅ Fetch a random character from the database
