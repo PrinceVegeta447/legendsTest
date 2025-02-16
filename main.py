@@ -117,7 +117,7 @@ DROP_RATES = {
 }
 
 async def send_image(update: Update, context: CallbackContext) -> None:
-    """Drops a character when the message frequency is reached."""
+    """Drops a character based on weighted rarity probability."""
     chat_id = update.effective_chat.id
 
     # ✅ Fetch all valid characters (excluding restricted rarities)
@@ -141,6 +141,9 @@ async def send_image(update: Update, context: CallbackContext) -> None:
     # ✅ Select a **random character** from the weighted pool
     character = random.choice(weighted_pool)
 
+    # ✅ Store the dropped character
+    last_characters[chat_id] = {"id": character["id"], "name": character["name"]}
+
     # ✅ Use **file_id** instead of image URL
     file_id = character.get("file_id", None)
     if not file_id:
@@ -151,14 +154,12 @@ async def send_image(update: Update, context: CallbackContext) -> None:
     await context.bot.send_photo(
         chat_id=chat_id,
         photo=file_id,
-        caption=(
-            "🔥 A Character Has Appeared!🔥\n\n"
-            "⚡ Be the first to /collect them!"
-        ),
+        caption="🔥 A Character Has Appeared!🔥\n\n⚡ Be the first to /collect them!",
         parse_mode="Markdown"
     )
 
     print(f"✅ [DEBUG] Character Dropped in {chat_id}: {character['name']}")
+
 # Define rewards based on rarity
 REWARD_TABLE = {
     "⛔ Common": (100, 150, 1, 3),
