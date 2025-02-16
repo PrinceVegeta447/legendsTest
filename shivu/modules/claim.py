@@ -7,7 +7,7 @@ from shivu import application, user_collection, collection
 
 # 📌 Claim Limits
 MAX_CLAIMS = 1  # Users can claim once per day
-COOLDOWN_TIME = 24 * 60 * 60  # 24 hours cooldown
+COOLDOWN_TIME = 24 * 60 * 60  # 24-hour cooldown
 GIF_FILE_ID = "BAACAgUAAyEFAASFUB9IAAIQAAFnsKpbDDyBb9emePMuEFN7gugV2QACIhMAApS5iFUcNzRBeFCYwTYE"
 
 async def claim(update: Update, context: CallbackContext) -> None:
@@ -30,20 +30,20 @@ async def claim(update: Update, context: CallbackContext) -> None:
         await user_collection.insert_one(user)
 
     # ✅ Fetch Claim Data
-    claims = user.get("claims", 0)
     last_claim = user.get("last_claim", 0)
     current_time = time.time()
-
-    # ✅ **Check Claim Limits**
-    if claims >= MAX_CLAIMS:
-        await update.message.reply_text("❌ You have already claimed today. Try again tomorrow!")
-        return
-
     cooldown_remaining = COOLDOWN_TIME - (current_time - last_claim)
+
+    # ✅ **Check Claim Cooldown**
     if cooldown_remaining > 0:
         hours = int(cooldown_remaining // 3600)
         minutes = int((cooldown_remaining % 3600) // 60)
-        await update.message.reply_text(f"⏳ You must wait {hours}h {minutes}m before claiming again!")
+        seconds = int(cooldown_remaining % 60)
+        
+        await update.message.reply_text(
+            f"⏳ You can claim again in <b>{hours}h {minutes}m {seconds}s</b>!",
+            parse_mode="HTML"
+        )
         return
 
     # ✅ Fetch a random character from the database
@@ -65,8 +65,7 @@ async def claim(update: Update, context: CallbackContext) -> None:
         {"id": user_id},
         {
             "$push": {"characters": random_character},
-            "$set": {"last_claim": current_time},
-            "$inc": {"claims": 1}
+            "$set": {"last_claim": current_time}
         }
     )
 
