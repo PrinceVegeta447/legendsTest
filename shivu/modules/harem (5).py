@@ -20,7 +20,6 @@ CATEGORY_ICONS = {
 RARITY_ICONS = {
     "⛔ Common": "⛔",
     "🍀 Rare": "🍀",
-    "🟣 Extreme": "🟣",
     "🟡 Sparking": "🟡",
     "🔱 Ultimate": "🔱",
     "👑 Supreme": "👑",
@@ -65,7 +64,7 @@ async def generate_harem_message(user, page, first_name):
     character_counts = {k: len(list(v)) for k, v in groupby(characters, key=lambda x: x["id"])}
     unique_characters = list({character['id']: character for character in characters}.values())
 
-    total_pages = max(1, math.ceil(len(unique_characters) / 10))
+    total_pages = max(1, math.ceil(len(unique_characters) / 15))
     page = max(0, min(page, total_pages - 1))
 
     # ✅ Display first name instead of full name
@@ -75,7 +74,7 @@ async def generate_harem_message(user, page, first_name):
         "━━━━━━━━━━━━━━━━━━━━\n"
     )
 
-    current_characters = unique_characters[page * 10 : (page + 1) * 10]
+    current_characters = unique_characters[page * 15 : (page + 1) * 15]
     grouped_characters = {k: list(v) for k, v in groupby(current_characters, key=lambda x: x.get(sort_by, "Unknown"))}
 
     for category, characters in grouped_characters.items():
@@ -149,7 +148,7 @@ async def sort_callback(update: Update, context: CallbackContext) -> None:
     await query.edit_message_text(f"✅ Collection is now sorted by **{sort_by.capitalize()}**. Use /collection to view.")
 
 # ✅ Register Handlers
-application.add_handler(CommandHandler(["harem", "collection"], harem, block=False))
+application.add_handler(CommandHandler("collection", harem, block=False))
 application.add_handler(CallbackQueryHandler(harem_callback, pattern="^harem", block=False))
 application.add_handler(CommandHandler("sort", sort_command, block=False))
 application.add_handler(CallbackQueryHandler(sort_callback, pattern="^sort:", block=False))
