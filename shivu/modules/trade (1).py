@@ -207,4 +207,4 @@ async def gift_callback(update: Update, context: CallbackContext) -> None:
     else:
         await query.message.edit_text("❌ **Gift Cancelled!**")
 
-application.add_handler(CallbackQueryHandler(gift_callback, pattern="^(confirm_gift|cancel_gift):", block=False)) **🎁 Gift System**
+application.add_handler(CallbackQueryHandler(gift_callback, pattern="^(confirm_gift|cancel_gift):", block=False))
