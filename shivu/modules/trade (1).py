@@ -173,7 +173,9 @@ async def gift(client, message) -> None:
         reply_markup=keyboard
     )
 
-async def gift_callback(update: Update, context: CallbackContext) -> None:
+
+@shivuu.on_callback_query(filters.create(lambda _, __, query: query.data in ["confirm_gift", "cancel_gift"]))
+async def gift_callback(client, callback_query) -> None:
     """Handles confirmation or cancellation of gift requests."""
     query = update.callback_query
     action, sender_id, receiver_id = query.data.split(":")
@@ -206,5 +208,3 @@ async def gift_callback(update: Update, context: CallbackContext) -> None:
         )
     else:
         await query.message.edit_text("❌ **Gift Cancelled!**")
-
-application.add_handler(CallbackQueryHandler(gift_callback, pattern="^(confirm_gift|cancel_gift):", block=False))
