@@ -17,7 +17,18 @@ Use: `/upload <file_id> <character-name> <rarity-number> <anime-number>`
 6. Ultimate  
 7. Celestial  
 8. Supreme
-"""
+
+🎭 **Anime Guide:**
+"1": "🐉 Dragon Ball",
+"2": "🏴‍☠️ One Piece
+"3": "🍃 Naruto"
+"4": "⚔️ Bleach",
+"5": "⛩️ Demon Slayer",
+"6": "🛡️ Attack on Titan",
+"7": "👊 Jujutsu Kaisen",
+"8": "🦸‍♂️ My Hero Academia",
+"9": "🎯 Hunter x Hunter"
+            """
 
 async def get_next_sequence_number(sequence_name):
     sequence_collection = db.sequences
