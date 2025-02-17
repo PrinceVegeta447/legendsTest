@@ -18,26 +18,6 @@ Ultimate
 Celestial 
 Supreme 
 
-🔹 **Category Guide:**  
-1. Saiyan  
-2. Hybrid Saiyan  
-3. Android  
-4. Frieza Force  
-5. God Ki  
-6. Super Warrior  
-7. Regeneration  
-8. Fusion Warrior
-9. Duo
-10. Super Saiyan God SS
-11. Ultra Instinct Sign
-12. Super Saiyan 
-13. Dragon Ball Saga
-14. Majin Buu Saga
-15. Cell Saga
-16. Sagas From the Movies
-17. Lineage Of Evil
-18. Universe Survival Saga
-"""
 
 async def get_next_sequence_number(sequence_name):
     sequence_collection = db.sequences
@@ -97,26 +77,18 @@ async def upload(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("❌ Invalid Rarity. Use numbers: 1-9.")
             return
 
-        category_map = {
-            "1": "🏆 Saiyan",
-            "2": "🔥 Hybrid Saiyan",
-            "3": "🤖 Android",
-            "4": "❄️ Frieza Force",
-            "5": "✨ God Ki",
-            "6": "💪 Super Warrior",
-            "7": "🩸 Regeneration",
-            "8": "🔀 Fusion Warrior",
-            "9": "🤝 Duo",
-           "10":"🔱 Super Saiyan God SS",
-           "11": "🗿 Ultra Instinct Sign",
-           "12": "⚡ Super Saiyan",
-           "13": "❤️‍🔥 Dragon Ball Saga",
-           "14": "💫 Majin Buu Saga",
-           "15": "👾 Cell Saga",
-           "16": "📽️ Sagas From the Movies",
-           "17": "☠️ Lineage Of Evil",
-           "18": "🌏 Universe Survival Saga"
+        anime_map = {
+    "1": "🐉 Dragon Ball",
+    "2": "🏴‍☠️ One Piece",
+    "3": "🍃 Naruto",
+    "4": "⚔️ Bleach",
+    "5": "⛩️ Demon Slayer",
+    "6": "🛡️ Attack on Titan",
+    "7": "👊 Jujutsu Kaisen",
+    "8": "🦸‍♂️ My Hero Academia",
+    "9": "🎯 Hunter x Hunter"
         }
+        
         category = category_map.get(category_input)
         if not category:
             await update.message.reply_text("❌ Invalid Category. Use numbers: 1-9.")
