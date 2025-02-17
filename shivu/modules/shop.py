@@ -3,7 +3,7 @@ from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler, 
 from shivu import application, user_collection
 
 # 🏪 **Item Prices**
-DIAMONDS_PRICE = 500       # 500 Zeni per Chrono Crystal
+DIAMOND_PRICE = 500       # 500 Zeni per Chrono Crystal
 TICKET_PRICE = 1000  # 1000 Zeni per Summon Ticket
 
 # 📌 **Track Sessions & Purchases**
