@@ -13,8 +13,8 @@ async def inventory(update: Update, context: CallbackContext) -> None:
     user.setdefault('summon_tickets', 0)
     user.setdefault('exclusive_tokens', 0)
 
-    coins = user['coins']
-    chrono_crystals = user['chrono_crystals']
+    tokens = user['coins']
+    diamonds = user['chrono_crystals']
     summon_tickets = user['summon_tickets']
     exclusive_tokens = user['exclusive_tokens']
 
@@ -22,8 +22,8 @@ async def inventory(update: Update, context: CallbackContext) -> None:
     inventory_message = (
         f"🎒 <b>{update.effective_user.first_name}'s Inventory</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💰 <b>Zeni:</b> <code>{coins}</code>\n"
-        f"💎 <b>Chrono Crystals:</b> <code>{chrono_crystals}</code>\n"
+        f"💴 <b>Tokens:</b> <code>{coins}</code>\n"
+        f"💎 <b>Diamonds:</b> <code>{chrono_crystals}</code>\n"
         f"🎟 <b>Summon Tickets:</b> <code>{summon_tickets}</code>\n"
         f"🛡️ <b>Exclusive Tokens:</b> <code>{exclusive_tokens}</code>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -45,8 +45,8 @@ async def modify_inventory(update: Update, context: CallbackContext, add: bool) 
         if len(args) != 3:
             await update.message.reply_text(
                 "❌ Usage:\n"
-                "🔹 `/additem <user_id> <zeni/cc/ticket/token> <amount>`\n"
-                "🔹 `/removeitem <user_id> <zeni/cc/ticket/token> <amount>`",
+                "🔹 `/additem <user_id> <token/cc/ticket/etoken> <amount>`\n"
+                "🔹 `/removeitem <user_id> <zeni/cc/ticket/etoken> <amount>`",
                 parse_mode="HTML"
             )
             return
@@ -56,10 +56,10 @@ async def modify_inventory(update: Update, context: CallbackContext, add: bool) 
         amount = int(args[2])
 
         item_map = {
-            "zeni": "coins",
-            "cc": "chrono_crystals",
+            "tokens": "coins",
+            "diamonds": "chrono_crystals",
             "ticket": "summon_tickets",
-            "token": "exclusive_tokens"
+            "etoken": "exclusive_tokens"
         }
 
         if item not in item_map:
