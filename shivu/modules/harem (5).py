@@ -7,14 +7,16 @@ from shivu import collection, user_collection, application, db
 
 DEFAULT_SORT = "rarity"  # Default sorting is now Rarity
 
-CATEGORY_ICONS = {
-    "🏆 Saiyan": "🏆", "🔥 Hybrid Saiyan": "🔥", "🤖 Android": "🤖",
-    "❄️ Frieza Force": "❄️", "✨ God Ki": "✨", "💪 Super Warrior": "💪",
-    "🩸 Regeneration": "🩸", "🔀 Fusion Warrior": "🔀", "🤝 Duo": "🤝",
-    "🔱 Super Saiyan God SS": "🔱", "🗿 Ultra Instinct Sign": "🗿",
-    "⚡ Super Saiyan": "⚡", "❤️‍🔥 Dragon Ball Saga": "❤️‍🔥",
-    "💫 Majin Buu Saga": "💫", "👾 Cell Saga": "👾", "📽️ Sagas From the Movies": "📽️",
-    "☠️ Lineage Of Evil": "☠️", "🌏 Universe Survival Saga": "🌏"
+ANIME_ICONS = {
+    "🐉 Dragon Ball": "🐉",
+    "🏴‍☠️ One Piece": "🏴‍☠️",
+    "🍃 Naruto": "🍃",
+    "⚔️ Bleach": "⚔️",
+    "⛩️ Demon Slayer": "⛩️",
+    "🛡️ Attack on Titan": "🛡️",
+    "👊 Jujutsu Kaisen": "👊",
+    "🦸‍♂️ My Hero Academia": "🦸‍♂️",
+    "🎯 Hunter x Hunter": "🎯"
 }
 
 RARITY_ICONS = {
@@ -77,11 +79,11 @@ async def generate_harem_message(user, page, first_name):
     current_characters = unique_characters[page * 15 : (page + 1) * 15]
     grouped_characters = {k: list(v) for k, v in groupby(current_characters, key=lambda x: x.get(sort_by, "Unknown"))}
 
-    for category, characters in grouped_characters.items():
+    for anime, characters in grouped_characters.items():
         owned_count = len(characters)
-        total_count = await collection.count_documents({sort_by: category}) or 1  # Prevent division by zero
+        total_count = await collection.count_documents({sort_by: anime}) or 1  # Prevent division by zero
 
-        harem_message += f"\n🫧 <b>{RARITY_ICONS.get(category, '')} {category}</b> ({owned_count}/{total_count})\n\n"
+        harem_message += f"\n🫧 <b>{RARITY_ICONS.get(anime, '')} {anime}</b> ({owned_count}/{total_count})\n\n"
 
         for character in characters:
             count = character_counts[character["id"]]
@@ -130,7 +132,7 @@ async def sort_command(update: Update, context: CallbackContext) -> None:
     """Sends sorting options."""
     keyboard = [
         [InlineKeyboardButton("📌 Sort by Rarity", callback_data="sort:rarity")],
-        [InlineKeyboardButton("📂 Sort by Category", callback_data="sort:category")],
+        [InlineKeyboardButton("📂 Sort by Anime", callback_data="sort:anime")],
         [InlineKeyboardButton("🔤 Sort Alphabetically", callback_data="sort:name")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
