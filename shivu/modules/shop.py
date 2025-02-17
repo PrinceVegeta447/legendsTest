@@ -3,7 +3,7 @@ from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler, 
 from shivu import application, user_collection
 
 # 🏪 **Item Prices**
-CC_PRICE = 500       # 500 Zeni per Chrono Crystal
+DIAMONDS_PRICE = 500       # 500 Zeni per Chrono Crystal
 TICKET_PRICE = 1000  # 1000 Zeni per Summon Ticket
 
 # 📌 **Track Sessions & Purchases**
@@ -15,19 +15,19 @@ async def shop(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     user = await user_collection.find_one({'id': user_id}) or {}
 
-    coins = user.get('coins', 0)
-    chrono_crystals = user.get('chrono_crystals', 0)
+    tokens = user.get('coins', 0)
+    diamonds = user.get('chrono_crystals', 0)
     summon_tickets = user.get('summon_tickets', 0)
 
     # 🎨 **Shop UI Message**
     shop_message = (
         f"<b>🛒 Welcome to the Shop, Warrior!</b>\n\n"
-        f"💰 <b>Your Zeni:</b> <code>{coins}</code>\n"
-        f"💎 <b>Chrono Crystals:</b> <code>{chrono_crystals}</code>\n"
+        f"💴 <b>Your Tokens:</b> <code>{coins}</code>\n"
+        f"💎 <b>Diamonds:</b> <code>{chrono_crystals}</code>\n"
         f"🎟 <b>Summon Tickets:</b> <code>{summon_tickets}</code>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🔹 <b>Available Items:</b>\n"
-        f"   ├ 💎 <b>Chrono Crystals</b> → <code>{CC_PRICE}</code> Zeni each\n"
+        f"   ├ 💎 <b>Diamonds</b> → <code>{DIAMOND_PRICE}</code> Zeni each\n"
         f"   └ 🎟 <b>Summon Tickets</b> → <code>{TICKET_PRICE}</code> Zeni each\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
         f"📌 <i>Select an item below to purchase:</i>"
@@ -35,7 +35,7 @@ async def shop(update: Update, context: CallbackContext) -> None:
 
     # 🛍 **Shop Buttons**
     keyboard = [
-        [InlineKeyboardButton("💎 Buy Chrono Crystals", callback_data=f"buy:cc:{user_id}")],
+        [InlineKeyboardButton("💎 Buy Diamonds", callback_data=f"buy:cc:{user_id}")],
         [InlineKeyboardButton("🎟 Buy Summon Tickets", callback_data=f"buy:ticket:{user_id}")],
         [InlineKeyboardButton("❌ Close Shop", callback_data=f"close_shop:{user_id}")]
     ]
@@ -119,7 +119,7 @@ async def confirm_purchase(update: Update, context: CallbackContext) -> None:
         f"⚠️ <b>Confirm Purchase</b>\n\n"
         f"🛒 You are about to buy:\n"
         f"🔹 <code>{amount}</code> {item_name}\n"
-        f"💰 Cost: <code>{total_cost}</code> Zeni\n\n"
+        f"💴 Cost: <code>{total_cost}</code> Tokens\n\n"
         f"✅ Click **Confirm** to proceed or **Cancel** to abort.",
         parse_mode="HTML",
         reply_markup=reply_markup
@@ -166,7 +166,7 @@ async def finalize_purchase(update: Update, context: CallbackContext) -> None:
     await query.message.edit_text(
         f"✅ <b>Purchase Successful!</b>\n\n"
         f"🎉 You received <code>{amount}</code> {item_name}.\n"
-        f"💰 <b>Remaining Zeni:</b> <code>{coins - total_cost}</code>\n"
+        f"💴 <b>Remaining Tokens:</b> <code>{coins - total_cost}</code>\n"
         f"🔹 Use /inventory to check your items.",
         parse_mode="HTML"
     )
