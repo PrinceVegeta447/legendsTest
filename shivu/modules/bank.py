@@ -14,10 +14,10 @@ async def check_balance(update: Update, context: CallbackContext):
     text = f"""
 🏦 **Bank Account Summary**
 ━━━━━━━━━━━━━━━━━
-💰 **Wallet Zeni:** `{user.get("coins", 0):,}`
+💴 **Wallet Tokens:** `{user.get("coins", 0):,}`
 🏦 **Bank Balance:** `{user.get("bank_balance", 0):,}`
 ━━━━━━━━━━━━━━━━━
-Use `/deposit <amount>` to save your Zeni in the bank.  
+Use `/deposit <amount>` to save your Tokens in the bank.  
 Use `/withdraw <amount>` to withdraw from the bank.
     """.strip()
 
@@ -78,7 +78,7 @@ async def withdraw(update: Update, context: CallbackContext):
 
         await user_collection.update_one({"id": user_id}, {"$inc": {"bank_balance": -amount, "coins": amount}}, upsert=True)
         await update.message.reply_text(
-            f"✅ **Successfully Withdrawn:** `{amount:,}` **Zeni** 💰\n"
+            f"✅ **Successfully Withdrawn:** `{amount:,}` **Tokens** 💴\n"
             f"🔹 **New Wallet Balance:** `{user.get('coins', 0) + amount:,}`\n"
             f"🔹 **New Bank Balance:** `{user.get('bank_balance', 0) - amount:,}`",
             parse_mode="Markdown"
