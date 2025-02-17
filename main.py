@@ -276,11 +276,11 @@ async def guess(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             f'<b><a href="tg://user?id={user_id}">{escape(update.effective_user.first_name)}</a></b> You guessed a new character! ✅️\n\n'
             f'🆔 <b>Name:</b> {dropped_character["name"]}\n'
-            f'🔹 <b>Category:</b> {dropped_character["category"]}\n'
+            f'🎭 <b>Anime:</b> {dropped_character["anime"]}\n'
             f'🎖 <b>Rarity:</b> {dropped_character["rarity"]}\n\n'
             f'🏆 <b>Rewards:</b>\n'
-            f'💰 <b>Zeni:</b> {coins_won}\n'
-            f'💎 <b>Chrono Crystals:</b> {chrono_crystals_won}\n\n'
+            f'💴 <b>Tokens:</b> {coins_won}\n'
+            f'💎 <b>Diamonds:</b> {chrono_crystals_won}\n\n'
             f'This character has been added to your collection. Use /collection to see your collection!',
             parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(keyboard)
