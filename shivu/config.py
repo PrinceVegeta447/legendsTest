@@ -11,7 +11,7 @@ class Config(object):
     SUPPORT_CHAT = "CollectYourLegends"
     UPDATE_CHAT = "CollectYourLegends"
     BOT_USERNAME = "CollecDBLegendsBot"
-    CHARA_CHANNEL_ID = "-1002431614358"
+    CHARA_CHANNEL_ID = "-1002236620616"
     api_id = 26626068
     api_hash = "bf423698bcbe33cfd58b11c78c42caa2"
     LOAN_CHANNEL_ID = "-1002366254495"
