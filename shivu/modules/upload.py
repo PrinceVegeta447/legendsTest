@@ -6,18 +6,18 @@ from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANN
 
 # ✅ Correct command usage instructions
 WRONG_FORMAT_TEXT = """❌ Incorrect Format!
-Use: `/upload <file_id> <character-name> <rarity-number> <category-number>`
+Use: `/upload <file_id> <character-name> <rarity-number> <anime-number>`
 
 🎖️ **Rarity Guide:**  
-Common 
-Rare
-Extreme 
-Sparkling 
-Limited Edition 
-Ultimate 
-Celestial 
-Supreme 
-
+1. Common  
+2. Rare  
+3. Extreme  
+4. Sparkling  
+5. Limited Edition  
+6. Ultimate  
+7. Celestial  
+8. Supreme
+"""
 
 async def get_next_sequence_number(sequence_name):
     sequence_collection = db.sequences
@@ -46,13 +46,13 @@ async def upload(update: Update, context: CallbackContext) -> None:
 
         file_id = args[0]  # First argument is file_id
         rarity_input = args[-2]  # Second-last argument is rarity
-        category_input = args[-1]  # Last argument is category
+        anime_input = args[-1]  # Last argument is category
         character_name = ' '.join(args[1:-2]).replace('-', ' ').title()  # Everything in between is the name
 
         # ✅ Check if character is exclusive
         is_exclusive = "exclusive" in args
         if is_exclusive:
-            category_input += " (Exclusive)"  # Append to category for database clarity
+            anime_input += " (Exclusive)"  # Append to category for database clarity
 
         # ✅ Validate file_id by checking if it exists using Telegram's API
         try:
@@ -60,7 +60,6 @@ async def upload(update: Update, context: CallbackContext) -> None:
         except Exception:
             await update.message.reply_text("❌ Invalid File ID. Please provide correct file id.")
             return
-
 
         rarity_map = {
             "1": "⛔ Common",
@@ -74,24 +73,24 @@ async def upload(update: Update, context: CallbackContext) -> None:
         }
         rarity = rarity_map.get(rarity_input)
         if not rarity:
-            await update.message.reply_text("❌ Invalid Rarity. Use numbers: 1-9.")
+            await update.message.reply_text("❌ Invalid Rarity. Use numbers: 1-8.")
             return
 
         anime_map = {
-    "1": "🐉 Dragon Ball",
-    "2": "🏴‍☠️ One Piece",
-    "3": "🍃 Naruto",
-    "4": "⚔️ Bleach",
-    "5": "⛩️ Demon Slayer",
-    "6": "🛡️ Attack on Titan",
-    "7": "👊 Jujutsu Kaisen",
-    "8": "🦸‍♂️ My Hero Academia",
-    "9": "🎯 Hunter x Hunter"
+            "1": "🐉 Dragon Ball",
+            "2": "🏴‍☠️ One Piece",
+            "3": "🍃 Naruto",
+            "4": "⚔️ Bleach",
+            "5": "⛩️ Demon Slayer",
+            "6": "🛡️ Attack on Titan",
+            "7": "👊 Jujutsu Kaisen",
+            "8": "🦸‍♂️ My Hero Academia",
+            "9": "🎯 Hunter x Hunter"
         }
         
-        category = category_map.get(category_input)
-        if not category:
-            await update.message.reply_text("❌ Invalid Category. Use numbers: 1-9.")
+        anime = anime_map.get(anime_input)
+        if not anime:
+            await update.message.reply_text("❌ Invalid Anime. Use numbers: 1-9.")
             return
 
         char_id = str(await get_next_sequence_number("character_id")).zfill(3)
@@ -100,7 +99,7 @@ async def upload(update: Update, context: CallbackContext) -> None:
             'file_id': file_id,
             'name': character_name,
             'rarity': rarity,
-            'category': category,
+            'anime': anime,
             'id': char_id,
             'exclusive': is_exclusive  # Mark as exclusive if applicable
         }
@@ -110,7 +109,7 @@ async def upload(update: Update, context: CallbackContext) -> None:
                 f"🏆 **New Character Added!**\n\n"
                 f"🔥 **Character:** {character_name}\n"
                 f"🎖️ **Rarity:** {rarity}\n"
-                f"🔹 **Category:** {category}\n"
+                f"🎭 **Anime:** {category}\n"
                 f"🆔 **ID:** {char_id}\n\n"
                 f"👤 Added by [{update.effective_user.first_name}](tg://user?id={user_id})"
             )
@@ -190,7 +189,7 @@ async def update(update: Update, context: CallbackContext) -> None:
         
         character_id, field, new_value = args[0], args[1], ' '.join(args[2:])
 
-        valid_fields = ["file_id", "name", "rarity", "category"]
+        valid_fields = ["file_id", "name", "rarity", "anime"]
         if field not in valid_fields:
             await update.message.reply_text(f"❌ Invalid field! Use one of: {', '.join(valid_fields)}")
             return
@@ -209,7 +208,7 @@ async def update(update: Update, context: CallbackContext) -> None:
         
         if field == "rarity":
             if new_value not in rarity_map:
-                await update.message.reply_text("❌ Invalid rarity. Use numbers 1-9.")
+                await update.message.reply_text("❌ Invalid rarity. Use numbers 1-8.")
                 return
             new_value = rarity_map[new_value]
 
@@ -225,6 +224,7 @@ async def update(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         await update.message.reply_text(f"❌ Update failed! Error: {str(e)}")
+
 # ✅ Add command handlers
 application.add_handler(CommandHandler("upload", upload, block=False))
 application.add_handler(CommandHandler("delete", delete, block=False))
