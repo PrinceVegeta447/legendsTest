@@ -120,7 +120,7 @@ async def upload(update: Update, context: CallbackContext) -> None:
                 f"🏆 **New Character Added!**\n\n"
                 f"🔥 **Character:** {character_name}\n"
                 f"🎖️ **Rarity:** {rarity}\n"
-                f"🎭 **Anime:** {category}\n"
+                f"🎭 **Anime:** {anime}\n"
                 f"🆔 **ID:** {char_id}\n\n"
                 f"👤 Added by [{update.effective_user.first_name}](tg://user?id={user_id})"
             )
