@@ -5,7 +5,8 @@ region: frankfurt # Change to your preferred region
 build:
   type: docker
   dockerfile: ./Dockerfile
-
+  language: python
+  
 run:
   command: python main.py # Replace with your bot's entry point
 
