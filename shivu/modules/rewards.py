@@ -10,14 +10,14 @@ WEEKLY_RESET = 604800  # 7 days
 MONTHLY_RESET = 2592000  # 30 days
 
 # Reward ranges
-DAILY_CC = (20, 40)
-DAILY_ZENI = (5000, 8000)
+DAILY_DIA = (20, 40)
+DAILY_TOKEN = (5000, 8000)
 
-WEEKLY_CC = (120, 200)
-WEEKLY_ZENI = (10000, 20000)
+WEEKLY_DIA = (120, 200)
+WEEKLY_TOKEN = (10000, 20000)
 
-MONTHLY_CC = (300, 500)
-MONTHLY_ZENI = (45000, 60000)
+MONTHLY_DIA = (300, 500)
+MONTHLY_TOKEN = (45000, 60000)
 
 async def claim_reward(update: Update, context: CallbackContext) -> None:
     """Handles /daily, /weekly, and /monthly commands for claiming rewards."""
@@ -32,8 +32,8 @@ async def claim_reward(update: Update, context: CallbackContext) -> None:
         user_data = {
             "_id": user_id,
             "first_name": user.first_name,
-            "chrono_crystals": 0,
-            "coins": 0,
+            "diamonds": 0,
+            "tokens": 0,
             "last_daily_claim": 0,
             "last_weekly_claim": 0,
             "last_monthly_claim": 0
@@ -46,22 +46,22 @@ async def claim_reward(update: Update, context: CallbackContext) -> None:
     if command == "/daily":
         last_claim = user_data.get("last_daily_claim", 0)
         cooldown = DAILY_RESET
-        reward_cc = random.randint(*DAILY_CC)
-        reward_zeni = random.randint(*DAILY_ZENI)
+        reward_dia = random.randint(*DAILY_DIA)
+        reward_tokens = random.randint(*DAILY_TOKEN)
         update_field = "last_daily_claim"
 
     elif command == "/weekly":
         last_claim = user_data.get("last_weekly_claim", 0)
         cooldown = WEEKLY_RESET
-        reward_cc = random.randint(*WEEKLY_CC)
-        reward_zeni = random.randint(*WEEKLY_ZENI)
+        reward_dia = random.randint(*WEEKLY_DIA)
+        reward_tokens = random.randint(*WEEKLY_TOKENS)
         update_field = "last_weekly_claim"
 
     elif command == "/monthly":
         last_claim = user_data.get("last_monthly_claim", 0)
         cooldown = MONTHLY_RESET
-        reward_cc = random.randint(*MONTHLY_CC)
-        reward_zeni = random.randint(*MONTHLY_ZENI)
+        reward_dia = random.randint(*MONTHLY_DIA)
+        reward_tokens = random.randint(*MONTHLY_TOKENS)
         update_field = "last_monthly_claim"
 
     else:
@@ -80,15 +80,15 @@ async def claim_reward(update: Update, context: CallbackContext) -> None:
     await user_collection.update_one(
         {"_id": user_id},
         {
-            "$inc": {"chrono_crystals": reward_cc, "coins": reward_zeni},
+            "$inc": {"diamonds": reward_dia, "tokens": reward_tokens},
             "$set": {update_field: current_time}
         }
     )
 
     await update.message.reply_text(
         f"🎉 **Claim Successful!**\n"
-        f"💎 Chrono Crystals: `{reward_cc}`\n"
-        f"🪙 Zeni: `{reward_zeni}`"
+        f"💎 Diamonds: `{reward_dia}`\n"
+        f"💴 Tokens: `{reward_tokens}`"
     )
 
 # ✅ Register the command handler
