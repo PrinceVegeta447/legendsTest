@@ -1,30 +1,16 @@
-name: telegram-bot
-type: application
-region: frankfurt # Change if needed
+user:
+  name: vegeta
+  github: PrinceVegeta447
 
-language: python
-version: "3.11"
+language: "python"
+python_version: "3.11"  # You can change this if needed
 
-build:
-  type: python
-  cmd: "pip install --upgrade pip && pip install -r requirements.txt"
-
-run:
-  cmd: "python main.py" # Adjust based on your bot’s entry point
-
-ports:
-  - port: 8000
-    protocol: http # Flask uses HTTP for health checks
-
-healthcheck:
-  type: tcp
-  path: /health
-  interval: 10s
-  timeout: 5s
-  retries: 3
+commands:
+  build:
+    - "pip install -r requirements.txt"
+  start:
+    - "python3 main.py"  # Make sure this matches your bot's entry file
 
 env:
-  - name: BOT_TOKEN
-    value: "7568918921:AAHT6_qx76-7hyG74S2T0eG1R1yWgqzXmWo"
-  - name: FLASK_PORT
-    value: "8000"
+  - "BOT_TOKEN=7568918921:AAHT6_qx76-7hyG74S2T0eG1R1yWgqzXmWo"
+  - "FLASK_PORT=8000"
