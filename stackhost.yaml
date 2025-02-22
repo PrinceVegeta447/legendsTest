@@ -3,10 +3,10 @@ type: web
 region: frankfurt # Change to your preferred region
 
 build:
-  type: docker
-  dockerfile: ./Dockerfile
+  type: python
   language: python
-  
+  version: "3.10" # Adjust based on your requirements
+
 run:
   command: python main.py # Replace with your bot's entry point
 
