@@ -1,18 +1,19 @@
 name: telegram-bot
-type: web
-region: frankfurt # Change to your preferred region
+type: application
+region: frankfurt # Change if needed
+
+language: python
+version: "3.11"
 
 build:
   type: python
-  language: python
-  version: "3.11" # Adjust based on your requirements
 
 run:
-  command: python main.py # Replace with your bot's entry point
+  command: python main.py # Adjust based on your bot’s entry point
 
 ports:
   - port: 8000
-    protocol: tcp
+    protocol: http # Change to HTTP if using Flask for health check
 
 healthcheck:
   type: http
