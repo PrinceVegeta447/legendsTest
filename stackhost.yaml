@@ -7,14 +7,16 @@ version: "3.11"
 
 build:
   type: python
-  command: pip install -r requirements.txt # Ensure dependencies are installed
+  command: |
+    pip install --upgrade pip
+    pip install -r requirements.txt
 
 run:
   command: python main.py # Adjust based on your bot’s entry point
 
 ports:
   - port: 8000
-    protocol: http # Change to HTTP if using Flask for health check
+    protocol: http # Flask uses HTTP for health checks
 
 healthcheck:
   type: tcp
