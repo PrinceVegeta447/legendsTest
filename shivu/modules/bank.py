@@ -14,7 +14,7 @@ async def check_balance(update: Update, context: CallbackContext):
     text = f"""
 🏦 **Bank Account Summary**
 ━━━━━━━━━━━━━━━━━
-💴 **Wallet Tokens:** `{user.get("coins", 0):,}`
+💴 **Wallet Tokens:** `{user.get("tokens", 0):,}`
 🏦 **Bank Balance:** `{user.get("bank_balance", 0):,}`
 ━━━━━━━━━━━━━━━━━
 Use `/deposit <amount>` to save your Tokens in the bank.  
@@ -26,7 +26,7 @@ Use `/withdraw <amount>` to withdraw from the bank.
 # 💰 **Deposit Command**
 async def deposit(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    user = await user_collection.find_one({"id": user_id}) or {"bank_balance": 0, "coins": 0}
+    user = await user_collection.find_one({"id": user_id}) or {"bank_balance": 0, "tokens": 0}
 
     if not context.args:
         await update.message.reply_text("❌ **Usage:** `/deposit <amount>`", parse_mode="Markdown")
@@ -35,17 +35,17 @@ async def deposit(update: Update, context: CallbackContext):
     try:
         amount = int(context.args[0])
         if amount < MIN_DEPOSIT:
-            await update.message.reply_text(f"⚠️ **Minimum deposit is** `{MIN_DEPOSIT:,}` **Zeni**.", parse_mode="Markdown")
+            await update.message.reply_text(f"⚠️ **Minimum deposit is** `{MIN_DEPOSIT:,}` **Tokens**.", parse_mode="Markdown")
             return
 
-        if amount > user.get("coins", 0):
-            await update.message.reply_text("🚫 **You don't have enough Zeni!**", parse_mode="Markdown")
+        if amount > user.get("tokens", 0):
+            await update.message.reply_text("🚫 **You don't have enough Tokens!**", parse_mode="Markdown")
             return
 
-        await user_collection.update_one({"id": user_id}, {"$inc": {"coins": -amount, "bank_balance": amount}}, upsert=True)
+        await user_collection.update_one({"id": user_id}, {"$inc": {"tokens": -amount, "bank_balance": amount}}, upsert=True)
         await update.message.reply_text(
-            f"✅ **Successfully Deposited:** `{amount:,}` **Zeni** 🏦\n"
-            f"🔹 **New Wallet Balance:** `{user.get('coins', 0) - amount:,}`\n"
+            f"✅ **Successfully Deposited:** `{amount:,}` **Tokens** 🏦\n"
+            f"🔹 **New Wallet Balance:** `{user.get('tokens', 0) - amount:,}`\n"
             f"🔹 **New Bank Balance:** `{user.get('bank_balance', 0) + amount:,}`",
             parse_mode="Markdown"
         )
@@ -55,7 +55,7 @@ async def deposit(update: Update, context: CallbackContext):
 # 🏦 **Withdraw Command**
 async def withdraw(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    user = await user_collection.find_one({"id": user_id}) or {"bank_balance": 0, "coins": 0}
+    user = await user_collection.find_one({"id": user_id}) or {"bank_balance": 0, "tokens": 0}
 
     if not context.args:
         await update.message.reply_text("❌ **Usage:** `/withdraw <amount>`", parse_mode="Markdown")
@@ -67,7 +67,7 @@ async def withdraw(update: Update, context: CallbackContext):
 
         if amount > max_withdraw:
             await update.message.reply_text(
-                f"⚠️ **You can only withdraw up to** `{max_withdraw:,}` **Zeni today.**",
+                f"⚠️ **You can only withdraw up to** `{max_withdraw:,}` **Tokens today.**",
                 parse_mode="Markdown"
             )
             return
@@ -76,10 +76,10 @@ async def withdraw(update: Update, context: CallbackContext):
             await update.message.reply_text("🚫 **You don't have enough balance!**", parse_mode="Markdown")
             return
 
-        await user_collection.update_one({"id": user_id}, {"$inc": {"bank_balance": -amount, "coins": amount}}, upsert=True)
+        await user_collection.update_one({"id": user_id}, {"$inc": {"bank_balance": -amount, "tokens": amount}}, upsert=True)
         await update.message.reply_text(
             f"✅ **Successfully Withdrawn:** `{amount:,}` **Tokens** 💴\n"
-            f"🔹 **New Wallet Balance:** `{user.get('coins', 0) + amount:,}`\n"
+            f"🔹 **New Wallet Balance:** `{user.get('tokens', 0) + amount:,}`\n"
             f"🔹 **New Bank Balance:** `{user.get('bank_balance', 0) - amount:,}`",
             parse_mode="Markdown"
         )
