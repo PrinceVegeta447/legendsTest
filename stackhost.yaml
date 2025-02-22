@@ -1,0 +1,27 @@
+name: telegram-bot
+type: web
+region: frankfurt # Change to your preferred region
+
+build:
+  type: docker
+  dockerfile: ./Dockerfile
+
+run:
+  command: python main.py # Replace with your bot's entry point
+
+ports:
+  - port: 8000
+    protocol: tcp
+
+healthcheck:
+  type: http
+  path: /health
+  interval: 10s
+  timeout: 5s
+  retries: 3
+
+env:
+  - name: BOT_TOKEN
+    value: "7568918921:AAHT6_qx76-7hyG74S2T0eG1R1yWgqzXmWo"
+  - name: FLASK_PORT
+    value: "8000"
