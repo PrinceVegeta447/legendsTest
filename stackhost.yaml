@@ -17,7 +17,7 @@ ports:
     protocol: http # Change to HTTP if using Flask for health check
 
 healthcheck:
-  type: http
+  type: tcp
   path: /health
   interval: 10s
   timeout: 5s
