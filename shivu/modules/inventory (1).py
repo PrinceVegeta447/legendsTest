@@ -14,7 +14,7 @@ async def inventory(update: Update, context: CallbackContext) -> None:
     user.setdefault('exclusive_tokens', 0)
 
     tokens = user['tokens']
-    diamonds = user['damonds']
+    diamonds = user['diamonds']
     summon_tickets = user['summon_tickets']
     exclusive_tokens = user['exclusive_tokens']
 
