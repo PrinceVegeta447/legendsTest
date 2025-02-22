@@ -15,15 +15,15 @@ async def shop(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     user = await user_collection.find_one({'id': user_id}) or {}
 
-    tokens = user.get('coins', 0)
-    diamonds = user.get('chrono_crystals', 0)
+    tokens = user.get('tokens', 0)
+    diamonds = user.get('diamonds', 0)
     summon_tickets = user.get('summon_tickets', 0)
 
     # 🎨 **Shop UI Message**
     shop_message = (
         f"<b>🛒 Welcome to the Shop, Warrior!</b>\n\n"
-        f"💴 <b>Your Tokens:</b> <code>{coins}</code>\n"
-        f"💎 <b>Diamonds:</b> <code>{chrono_crystals}</code>\n"
+        f"💴 <b>Your Tokens:</b> <code>{tokens}</code>\n"
+        f"💎 <b>Diamonds:</b> <code>{diamonds}</code>\n"
         f"🎟 <b>Summon Tickets:</b> <code>{summon_tickets}</code>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
         f"🔹 <b>Available Items:</b>\n"
@@ -35,7 +35,7 @@ async def shop(update: Update, context: CallbackContext) -> None:
 
     # 🛍 **Shop Buttons**
     keyboard = [
-        [InlineKeyboardButton("💎 Buy Diamonds", callback_data=f"buy:cc:{user_id}")],
+        [InlineKeyboardButton("💎 Buy Diamonds", callback_data=f"buy:dia:{user_id}")],
         [InlineKeyboardButton("🎟 Buy Summon Tickets", callback_data=f"buy:ticket:{user_id}")],
         [InlineKeyboardButton("❌ Close Shop", callback_data=f"close_shop:{user_id}")]
     ]
@@ -86,7 +86,7 @@ async def confirm_purchase(update: Update, context: CallbackContext) -> None:
         return  # Ignore messages unrelated to purchase
 
     purchase_type = pending_purchases.pop(user_id)  # Retrieve purchase type
-    coins = user.get('coins', 0)
+    coins = user.get('tokens', 0)
 
     try:
         amount = int(update.message.text)
@@ -97,13 +97,13 @@ async def confirm_purchase(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text("❌ <b>Invalid input!</b> Please enter a valid number.", parse_mode="HTML")
         return
 
-    price = CC_PRICE if purchase_type == "cc" else TICKET_PRICE
+    price = DIAMOND_PRICE if purchase_type == "dia" else TICKET_PRICE
     total_cost = amount * price
-    item_name = "Chrono Crystals" if purchase_type == "cc" else "Summon Tickets"
+    item_name = "Diamonds" if purchase_type == "dia" else "Summon Tickets"
 
     if coins < total_cost:
         await update.message.reply_text(
-            f"❌ <b>Not enough Zeni!</b>\nYou need <code>{total_cost}</code> Zeni for <code>{amount}</code> {item_name}.",
+            f"❌ <b>Not enough tokens!</b>\nYou need <code>{total_cost}</code> Tokens for <code>{amount}</code> {item_name}.",
             parse_mode="HTML"
         )
         return
@@ -150,23 +150,23 @@ async def finalize_purchase(update: Update, context: CallbackContext) -> None:
         return
 
     user = await user_collection.find_one({'id': user_id}) or {}
-    coins = user.get('coins', 0)
-    price = CC_PRICE if purchase_type == "cc" else TICKET_PRICE
+    tokens = user.get('tokens', 0)
+    price = DIAMOND_PRICE if purchase_type == "dia" else TICKET_PRICE
     total_cost = amount * price
-    item_name = "Chrono Crystals" if purchase_type == "cc" else "Summon Tickets"
+    item_name = "diamonds" if purchase_type == "dia" else "Summon Tickets"
 
     if coins < total_cost:
-        await query.answer(f"❌ Not enough Zeni! Need {total_cost} Zeni.", show_alert=True)
+        await query.answer(f"❌ Not enough Zeni! Need {total_cost} Tokens.", show_alert=True)
         return
 
     # ✅ Deduct Zeni & Add Purchased Items
-    field = "chrono_crystals" if purchase_type == "cc" else "summon_tickets"
-    await user_collection.update_one({'id': user_id}, {'$inc': {'coins': -total_cost, field: amount}})
+    field = "diamonds" if purchase_type == "dia" else "summon_tickets"
+    await user_collection.update_one({'id': user_id}, {'$inc': {'tokens': -total_cost, field: amount}})
 
     await query.message.edit_text(
         f"✅ <b>Purchase Successful!</b>\n\n"
         f"🎉 You received <code>{amount}</code> {item_name}.\n"
-        f"💴 <b>Remaining Tokens:</b> <code>{coins - total_cost}</code>\n"
+        f"💴 <b>Remaining Tokens:</b> <code>{tokens - total_cost}</code>\n"
         f"🔹 Use /inventory to check your items.",
         parse_mode="HTML"
     )
