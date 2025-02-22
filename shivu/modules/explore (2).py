@@ -6,7 +6,7 @@ from shivu import application, user_collection
 
 # Explore settings
 EXPLORE_COOLDOWN = 300  # 5 minutes (300 seconds)
-EXPLORE_LIMIT = 60  # Max explores per day
+EXPLORE_LIMIT = 20 # Max explores per day
 EXPLORE_LOCATIONS = [
     ("🌳 Enchanted Forest", "forest"),
     ("🏙️ Bustling City", "city"),
@@ -56,7 +56,7 @@ async def handle_explore(update: Update, context: CallbackContext) -> None:
 
     # Check daily limit
     if explore_count >= EXPLORE_LIMIT:
-        await query.answer("❌ You have reached the daily explore limit (60). Try again tomorrow!", show_alert=True)
+        await query.answer("❌ You have reached the daily explore limit (20). Try again tomorrow!", show_alert=True)
         return
 
     # Check cooldown
@@ -69,21 +69,21 @@ async def handle_explore(update: Update, context: CallbackContext) -> None:
             return
 
     # Rewards
-    zeni_reward = random.randint(100, 300)
-    cc_reward = random.randint(1, 5)
+    token_reward = random.randint(0, 100000)
+    dia_reward = random.randint(0, 500)
 
     # Update user data
     await user_collection.update_one(
         {"user_id": user_id},
         {"$set": {"last_explore": now.strftime("%Y-%m-%d %H:%M:%S")},
-         "$inc": {"explore_count": 1, "coins": zeni_reward, "chrono_crystals": cc_reward}}
+         "$inc": {"explore_count": 1, "tokens": token_reward, "diamonds": dia_reward}}
     )
 
     # Send explore result
     message = (
         f"🌍 **You explored:** {location_name}\n"
-        f"💰 **Zeni Earned:** {zeni_reward}\n"
-        f"💎 **Chrono Crystals Earned:** {cc_reward}\n"
+        f"💴 **Tokens Earned:** {token_reward}\n"
+        f"💎 **Diamonds Earned:** {dia_reward}\n"
         f"🚀 Keep exploring!"
     )
 
