@@ -113,9 +113,9 @@ RESTRICTED_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
 DROP_RATES = {
     "⛔ Common": 45,
     "🍀 Rare": 30,
-    "🟡 Sparking": 24,
-    "🔮 Limited Edition": 0.9,
-    "🔱 Ultimate": 0.1
+    "🟡 Sparking": 23,
+    "🔮 Limited Edition": 1,
+    "🔱 Ultimate": 1
 }
 
 async def send_image(update: Update, context: CallbackContext) -> None:
