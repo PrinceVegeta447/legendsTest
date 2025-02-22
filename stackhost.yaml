@@ -7,12 +7,10 @@ version: "3.11"
 
 build:
   type: python
-  command: |
-    pip install --upgrade pip
-    pip install -r requirements.txt
+  cmd: "pip install --upgrade pip && pip install -r requirements.txt"
 
 run:
-  command: python main.py # Adjust based on your bot’s entry point
+  cmd: "python main.py" # Adjust based on your bot’s entry point
 
 ports:
   - port: 8000
