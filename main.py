@@ -111,11 +111,11 @@ RESTRICTED_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
 
 # ✅ Set Drop Rates (as percentages)
 DROP_RATES = {
-    "⛔ Common": 40,
+    "⛔ Common": 45,
     "🍀 Rare": 30,
     "🟡 Sparking": 24,
-    "🔮 Limited Edition": 5,
-    "🔱 Ultimate": 1
+    "🔮 Limited Edition": 0.9,
+    "🔱 Ultimate": 0.1
 }
 
 async def send_image(update: Update, context: CallbackContext) -> None:
@@ -227,12 +227,12 @@ async def guess(update: Update, context: CallbackContext) -> None:
 
         # ✅ Assign rewards based on rarity
         if character_rarity in REWARD_TABLE:
-            coin_min, coin_max, cc_min, cc_max = REWARD_TABLE[character_rarity]
-            coins_won = random.randint(coin_min, coin_max)
-            chrono_crystals_won = random.randint(cc_min, cc_max)
+            token_min, token_max, token_min, dia_max = REWARD_TABLE[character_rarity]
+            token_won = random.randint(token_min, token_max)
+            dia_won = random.randint(dia_min, dia_max)
         else:
-            coins_won = random.randint(100, 200)  # Default fallback
-            chrono_crystals_won = random.randint(1, 5)
+            token_won = random.randint(100, 200)  # Default fallback
+            dia_won = random.randint(1, 5)
 
         # ✅ Update user collection
         user = await user_collection.find_one({'id': user_id})
@@ -246,15 +246,15 @@ async def guess(update: Update, context: CallbackContext) -> None:
                 await user_collection.update_one({'id': user_id}, {'$set': update_fields})
 
             await user_collection.update_one({'id': user_id}, {'$push': {'characters': dropped_character}})
-            await user_collection.update_one({'id': user_id}, {'$inc': {'coins': coins_won, 'chrono_crystals': chrono_crystals_won}})
+            await user_collection.update_one({'id': user_id}, {'$inc': {'tokens': token_won, 'diamonds': dia_won}})
         else:
             await user_collection.insert_one({
                 'id': user_id,
                 'username': update.effective_user.username,
                 'first_name': update.effective_user.first_name,
                 'characters': [dropped_character],
-                'coins': coins_won,
-                'chrono_crystals': chrono_crystals_won
+                'tokens': token_won,
+                'diamonds': dia_won
             })
 
         # ✅ Update group user stats
@@ -279,8 +279,8 @@ async def guess(update: Update, context: CallbackContext) -> None:
             f'🎭 <b>Anime:</b> {dropped_character["anime"]}\n'
             f'🎖 <b>Rarity:</b> {dropped_character["rarity"]}\n\n'
             f'🏆 <b>Rewards:</b>\n'
-            f'💴 <b>Tokens:</b> {coins_won}\n'
-            f'💎 <b>Diamonds:</b> {chrono_crystals_won}\n\n'
+            f'💴 <b>Tokens:</b> {token_won}\n'
+            f'💎 <b>Diamonds:</b> {dia_won}\n\n'
             f'This character has been added to your collection. Use /collection to see your collection!',
             parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(keyboard)
