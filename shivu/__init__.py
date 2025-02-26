@@ -54,3 +54,5 @@ expired_codes_collection = db["expired_codes"]
 db.redeem_codes.create_index("code", unique=True)  # Prevent duplicate codes
 db.expired_codes.create_index("code", unique=True)  # Track used codes
 boss_collection = db["boss"]
+raid_collection = db["raid"]
+leaderboard_collection = db["leaderboard"]
