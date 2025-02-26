@@ -1,13 +1,13 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import user_collection, application, OWNER_ID, sudo_users
 
 async def inventory(update: Update, context: CallbackContext) -> None:
-    """Shows the user's inventory (Zeni, Chrono Crystals, Tickets, and Exclusive Tokens)."""
+    """Displays the user's inventory with enhanced UI."""
     user_id = update.effective_user.id
     user = await user_collection.find_one({'id': user_id}) or {}
 
-    # ✅ Initialize inventory if user does not exist
+    # ✅ Ensure inventory exists
     user.setdefault('tokens', 0)
     user.setdefault('diamonds', 0)
     user.setdefault('summon_tickets', 0)
@@ -22,15 +22,25 @@ async def inventory(update: Update, context: CallbackContext) -> None:
     inventory_message = (
         f"🎒 <b>{update.effective_user.first_name}'s Inventory</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💴 <b>Tokens:</b> <code>{tokens}</code>\n"
-        f"💎 <b>Diamonds:</b> <code>{diamonds}</code>\n"
-        f"🎟 <b>Summon Tickets:</b> <code>{summon_tickets}</code>\n"
-        f"🛡️ <b>Exclusive Tokens:</b> <code>{exclusive_tokens}</code>\n"
+        f"💴 <b>Tokens:</b> <code>{tokens:,}</code>\n"
+        f"💎 <b>Diamonds:</b> <code>{diamonds:,}</code>\n"
+        f"🎟 <b>Summon Tickets:</b> <code>{summon_tickets:,}</code>\n"
+        f"🛡️ <b>Exclusive Tokens:</b> <code>{exclusive_tokens:,}</code>\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🔹 Keep guessing characters to earn more rewards!\n"
+        f"🔹 Earn more rewards by guessing characters!\n"
     )
 
-    await update.message.reply_text(inventory_message, parse_mode="HTML")
+    # 🔘 **Inline Buttons for Better Navigation**
+    keyboard = [
+        [InlineKeyboardButton("🏪 Open Shop", callback_data="open_shop")],
+        [InlineKeyboardButton("🏆 Top Players", callback_data="top_players")]
+    ]
+
+    await update.message.reply_text(
+        inventory_message,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 async def modify_inventory(update: Update, context: CallbackContext, add: bool) -> None:
     """Allows the owner or sudo users to add/remove items from a user's inventory."""
@@ -44,14 +54,14 @@ async def modify_inventory(update: Update, context: CallbackContext, add: bool) 
         args = context.args
         if len(args) != 3:
             await update.message.reply_text(
-                "❌ Usage:\n"
-                "🔹 `/additem <user_id> <token/diamonds/ticket/etoken> <amount>`\n"
-                "🔹 `/removeitem <user_id> <token/diamonds/ticket/etoken> <amount>`",
+                "❌ <b>Usage:</b>\n"
+                "➤ `/additem <user_id> <token/diamonds/ticket/etoken> <amount>`\n"
+                "➤ `/removeitem <user_id> <token/diamonds/ticket/etoken> <amount>`",
                 parse_mode="HTML"
             )
             return
 
-        target_id = int(args[0])  # Target user's ID
+        target_id = int(args[0])  
         item = args[1].lower()
         amount = int(args[2])
 
@@ -68,33 +78,62 @@ async def modify_inventory(update: Update, context: CallbackContext, add: bool) 
 
         field = item_map[item]
 
-        # ✅ Ensure user exists in the database (Prevents missing inventory)
         user = await user_collection.find_one({'id': target_id}) or {}
-        user.setdefault(field, 0)  # Default to 0 if missing
+        user.setdefault(field, 0)
 
-        # ✅ Prevent negative values when removing items
         new_value = max(0, user[field] + (amount if add else -amount))
 
         await user_collection.update_one({'id': target_id}, {'$set': {field: new_value}})
 
         action = "added to" if add else "removed from"
-        await update.message.reply_text(f"✅ <b>{amount} {item.capitalize()} {action} user {target_id}'s inventory!</b>", parse_mode="HTML")
+        await update.message.reply_text(
+            f"✅ <b>{amount:,} {item.capitalize()} {action} user {target_id}'s inventory!</b>", 
+            parse_mode="HTML"
+        )
 
     except ValueError:
         await update.message.reply_text("❌ Invalid number format! Please enter a valid amount.", parse_mode="HTML")
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {str(e)}", parse_mode="HTML")
 
-# ✅ **Separate handlers for Add & Remove Inventory**
-async def add_inventory(update: Update, context: CallbackContext) -> None:
-    """Command for adding inventory items."""
-    await modify_inventory(update, context, add=True)
+async def open_shop(update: Update, context: CallbackContext) -> None:
+    """Displays the shop where users can spend tokens."""
+    query = update.callback_query
+    await query.answer()
 
-async def remove_inventory(update: Update, context: CallbackContext) -> None:
-    """Command for removing inventory items."""
-    await modify_inventory(update, context, add=False)
+    shop_message = (
+        "🏪 <b>Welcome to the Shop!</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💎 **Diamonds:** 1000 Tokens 💰\n"
+        "🎟 **Summon Ticket:** 1500 Tokens 🎫\n"
+        "🛡️ **Exclusive Token:** 500 Tokens 🔥\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Use `/buy <item>` to purchase!"
+    )
 
-# ✅ **Fixed Handlers**
+    await query.message.edit_text(shop_message, parse_mode="HTML")
+
+async def top_players(update: Update, context: CallbackContext) -> None:
+    """Displays top players based on their tokens."""
+    query = update.callback_query
+    await query.answer()
+
+    # ✅ Fetch top 5 players sorted by tokens
+    top_users = await user_collection.find({}, {"id": 1, "tokens": 1, "first_name": 1}).sort("tokens", -1).limit(5).to_list(length=5)
+
+    if not top_users:
+        await query.message.edit_text("❌ No players found!", parse_mode="HTML")
+        return
+
+    leaderboard = "🏆 <b>Top Players by Tokens</b>\n━━━━━━━━━━━━━━━━━━━━━━\n"
+    for rank, user in enumerate(top_users, 1):
+        leaderboard += f"{rank}. {user.get('first_name', 'Unknown')} - 💰 {user['tokens']:,} Tokens\n"
+
+    await query.message.edit_text(leaderboard, parse_mode="HTML")
+
+# ✅ Command Handlers
 application.add_handler(CommandHandler("inventory", inventory, block=False))
 application.add_handler(CommandHandler("additem", add_inventory, block=False))
 application.add_handler(CommandHandler("removeitem", remove_inventory, block=False))
+application.add_handler(CallbackQueryHandler(open_shop, pattern="open_shop", block=False))
+application.add_handler(CallbackQueryHandler(top_players, pattern="top_players", block=False))
