@@ -6,26 +6,34 @@ import shlex
   # First argument is command itself
 # ✅ Create a New Banner
 async def create_banner(update: Update, context: CallbackContext) -> None:
+    """Creates a new summon banner with an image."""
+    
+    # ✅ Check Permission
     if update.effective_user.id not in sudo_users and update.effective_user.id != OWNER_ID:
         await update.message.reply_text("🚫 <b>You don't have permission to create banners!</b>", parse_mode="HTML")
         return
 
     try:
-        args = shlex.split(update.message.text)  # ✅ Corrected Indentation
-        if len(args) != 3:
+        # ✅ Split Command Arguments
+        args = shlex.split(update.message.text)[1:]  # Ignore the command itself
+
+        # ✅ Ensure Proper Argument Count
+        if len(args) != 2:
             await update.message.reply_text(
                 "❌ <b>Usage:</b>\n<code>/createbanner &lt;name&gt; &lt;file_id&gt;</code>",
                 parse_mode="HTML"
             )
             return
-    except Exception as e:
-        await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
+        # ✅ Extract Arguments
         name, file_id = args
+
+        # ✅ Insert into Database
         banner = {"name": name, "file_id": file_id, "characters": []}
         banner_doc = await banners_collection.insert_one(banner)
         banner_id = str(banner_doc.inserted_id)
 
+        # ✅ Send Confirmation Message
         keyboard = [[InlineKeyboardButton("📜 View Banners", callback_data="view_banners")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -41,9 +49,9 @@ async def create_banner(update: Update, context: CallbackContext) -> None:
             parse_mode="HTML",
             reply_markup=reply_markup
         )
+
     except Exception as e:
         await update.message.reply_text(f"❌ <b>Error Creating Banner:</b> <code>{str(e)}</code>", parse_mode="HTML")
-
 
 # ✅ List All Active Banners
 async def view_banners(update: Update, context: CallbackContext) -> None:
