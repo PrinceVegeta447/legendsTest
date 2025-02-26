@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackContext
+from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler
 from shivu import user_collection, application, OWNER_ID, sudo_users
 
 async def inventory(update: Update, context: CallbackContext) -> None:
