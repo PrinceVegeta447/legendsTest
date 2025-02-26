@@ -1,9 +1,9 @@
 import time
+import random
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, user_collection, collection
-import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # 📌 Pass Details
 WEEKLY_PASS_PRICE = 8000  # Price in Diamonds
@@ -81,58 +81,55 @@ async def check_pass(update: Update, context: CallbackContext) -> None:
 # ✅ Register Command
 application.add_handler(CommandHandler("pass", check_pass, block=False))
 
-
-async def distribute_pass_rewards():
+async def distribute_pass_rewards(context: CallbackContext):
     """Gives daily rewards to users with an active Weekly Pass."""
-    while True:
-        now = datetime.utcnow()
-        if now.hour == 0:  # Run at 12:00 AM UTC
-            users = await user_collection.find({"pass.type": "weekly"}).to_list(length=None)
+    users = await user_collection.find({"pass.type": "weekly"}).to_list(length=None)
 
-            for user in users:
-                pass_info = user["pass"]
-                if int(time.time()) >= pass_info["expiry"]:
-                    # ✅ Pass Expired, Remove It
-                    await user_collection.update_one({'id': user["id"]}, {'$unset': {'pass': ""}})
-                    continue
+    for user in users:
+        pass_info = user["pass"]
+        if int(time.time()) >= pass_info["expiry"]:
+            # ✅ Pass Expired, Remove It
+            await user_collection.update_one({'id': user["id"]}, {'$unset': {'pass': ""}})
+            continue
 
-                # ✅ Get today's reward
-                day_index = now.weekday()
-                reward = WEEKLY_PASS_REWARDS.get(day_index, {"tokens": 0, "diamonds": 0, "rarity": "🍀 Rare"})
+        # ✅ Get today's reward
+        day_index = datetime.utcnow().weekday()
+        reward = WEEKLY_PASS_REWARDS.get(day_index, {"tokens": 0, "diamonds": 0, "rarity": "🍀 Rare"})
 
-                # ✅ Get a random character of the day's rarity
-                character = await collection.aggregate([
-                    {"$match": {"rarity": reward["rarity"]}},
-                    {"$sample": {"size": 1}}
-                ]).to_list(length=1)
+        # ✅ Get a random character of the day's rarity
+        character = await collection.aggregate([
+            {"$match": {"rarity": reward["rarity"]}},
+            {"$sample": {"size": 1}}
+        ]).to_list(length=1)
 
-                if character:
-                    character = character[0]
-                    await user_collection.update_one({'id': user["id"]}, {
-                        '$inc': {'tokens': reward["tokens"], 'diamonds': reward["diamonds"]},
-                        '$push': {'characters': character}
-                    })
-                    character_msg = f"🎴 **New Character:** {character['name']} ({character['rarity']})"
-                else:
-                    character_msg = "❌ No character found for today's rarity."
+        if character:
+            character = character[0]
+            await user_collection.update_one({'id': user["id"]}, {
+                '$inc': {'tokens': reward["tokens"], 'diamonds': reward["diamonds"]},
+                '$push': {'characters': character}
+            })
+            character_msg = f"🎴 **New Character:** {character['name']} ({character['rarity']})"
+        else:
+            character_msg = "❌ No character found for today's rarity."
 
-                # ✅ Send User a Notification
-                await application.bot.send_message(
-                    chat_id=user["id"],
-                    text=(
-                        f"🎟️ **Weekly Pass Daily Reward** 🎟️\n\n"
-                        f"🗓 **Day:** {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day_index]}\n"
-                        f"💎 **Diamonds Earned:** `{reward['diamonds']}`\n"
-                        f"🪙 **Tokens Earned:** `{reward['tokens']}`\n"
-                        f"{character_msg}\n\n"
-                        f"🎁 Rewards given automatically!"
-                    ),
-                    parse_mode="Markdown"
-                )
+        # ✅ Send User a Notification
+        try:
+            await context.bot.send_message(
+                chat_id=user["id"],
+                text=(
+                    f"🎟️ **Weekly Pass Daily Reward** 🎟️\n\n"
+                    f"🗓 **Day:** {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][day_index]}\n"
+                    f"💎 **Diamonds Earned:** `{reward['diamonds']}`\n"
+                    f"🪙 **Tokens Earned:** `{reward['tokens']}`\n"
+                    f"{character_msg}\n\n"
+                    f"🎁 Rewards given automatically!"
+                ),
+                parse_mode="Markdown"
+            )
+        except:
+            pass  # Ignore message sending failures
 
-            print(f"✅ Daily pass rewards distributed to {len(users)} users!")
+    print(f"✅ Daily pass rewards distributed to {len(users)} users!")
 
-        await asyncio.sleep(3600)  # Check every hour
-
-# ✅ Start Reward System
-       await.asyncio.create_task(distribute_pass_rewards())
+# ✅ Schedule Daily Pass Rewards at 12 AM UTC
+application.job_queue.run_daily(distribute_pass_rewards, time=datetime.utcnow().replace(hour=0, minute=0, second=0))
