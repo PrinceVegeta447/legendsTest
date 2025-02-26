@@ -32,22 +32,17 @@ async def check_character(update: Update, context: CallbackContext) -> None:
         [InlineKeyboardButton("📍 Show Collectors Here", callback_data=f"show_local_collectors:{character_id}")]
     ]
 
-    file_id = character.get("file_id")
-    
-    if file_id:
-        await update.message.reply_photo(
-            photo=file_id,
-            caption=message,
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    else:
-        await update.message.reply_text(message, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_photo(
+        photo=character.get("file_id", None),
+        caption=message,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 async def show_top_collectors(update: Update, context: CallbackContext) -> None:
     """Displays top collectors for a specific character globally."""
     query = update.callback_query
-    await query.answer()  # ✅ Ensure button is responsive
+    await query.answer()  # Acknowledge the callback
     _, character_id = query.data.split(":")  
 
     # ✅ Fetch Top Collectors
@@ -57,7 +52,7 @@ async def show_top_collectors(update: Update, context: CallbackContext) -> None:
         {"$match": {"characters.id": character_id}},  
         {"$group": {
             "_id": "$id",
-            "count": {"$sum": 1},  # ✅ Each character counts as one occurrence
+            "count": {"$sum": 1},  
             "first_name": {"$first": "$first_name"}  
         }},
         {"$sort": {"count": -1}},  
@@ -73,25 +68,25 @@ async def show_top_collectors(update: Update, context: CallbackContext) -> None:
     # ✅ Format the Message
     message = "🏆 <b>Top Collectors for this Character:</b>\n\n"
     for i, user in enumerate(collectors, 1):
-        message += f"{i}. {user['first_name']} - <b>[{user['count']}]</b> \n"
+        message += f"{i}. {user['first_name']} - [{user['count']}] \n"
 
     await query.message.edit_text(message, parse_mode="HTML")
 
 async def show_local_collectors(update: Update, context: CallbackContext) -> None:
     """Displays collectors of a specific character in the current group."""
     query = update.callback_query
-    await query.answer()  # ✅ Ensure button is responsive
+    await query.answer()  # Acknowledge the callback
     _, character_id = query.data.split(":")
     group_id = query.message.chat.id
 
     # ✅ Fetch all users who own the character
     pipeline = [
-        {"$match": {"characters.id": character_id}},  
+        {"$match": {"characters.id": character_id, "groups": group_id}},  
         {"$unwind": "$characters"},  
         {"$match": {"characters.id": character_id}},  
         {"$group": {
             "_id": "$id",
-            "count": {"$sum": 1},  # ✅ Each character counts as one occurrence
+            "count": {"$sum": 1},  
             "first_name": {"$first": "$first_name"}
         }},
         {"$sort": {"count": -1}},  
@@ -104,25 +99,10 @@ async def show_local_collectors(update: Update, context: CallbackContext) -> Non
         await query.answer("❌ No collectors found in this group!", show_alert=True)
         return
 
-    # ✅ Filter Active Members in the Group
-    active_collectors = []
-    for user in collectors:
-        user_id = int(user["_id"])
-        try:
-            chat_member = await context.bot.get_chat_member(group_id, user_id)
-            if chat_member.status in ["member", "administrator", "creator"]:  
-                active_collectors.append(user)
-        except:
-            pass  
-
-    if not active_collectors:
-        await query.answer("❌ No active collectors in this group!", show_alert=True)
-        return
-
     # ✅ Format the Message
     message = "📍 <b>Collectors in this Group:</b>\n\n"
-    for i, user in enumerate(active_collectors[:5], 1):  
-        message += f"{i}. {user['first_name']} - <b>[{user['count']}]</b> \n"
+    for i, user in enumerate(collectors, 1):  
+        message += f"{i}. {user['first_name']} - [{user['count']}] \n"
 
     await query.message.edit_text(message, parse_mode="HTML")
 
