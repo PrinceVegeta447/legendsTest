@@ -18,12 +18,12 @@ async def check_character(update: Update, context: CallbackContext) -> None:
     # ✅ Extract Character Details
     name = character["name"]
     rarity_text = character.get("rarity", "❓ Unknown Rarity")  
-    category_text = character.get("category", "❓ Unknown Category")
+    anime_text = character.get("anime", "❓ Unknown Anime")
 
     message = (
         f"🎴 <b>Character:</b> {name}\n"
         f"🎖 <b>Rarity:</b> {rarity_text}\n"
-        f"📜 <b>Category:</b> {category_text}"
+        f"📜 <b>Anime:</b> {anime_text}"
     )
 
     # ✅ Buttons: Top Collectors | Show Collectors Here
