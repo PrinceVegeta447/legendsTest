@@ -24,7 +24,7 @@ ATTACK_TYPES = {
 }
 
 # 📌 RAID SETTINGS
-MAX_ATTACKS_PER_DAY = 3
+MAX_ATTACKS_PER_DAY = 9
 BASE_BOSS_HP = 500000  # Initial boss HP (scales with players)
 
 # 📌 CURRENT RAID STATE
@@ -113,7 +113,7 @@ async def attack_boss(update: Update, context: CallbackContext):
     if random.randint(1, 100) > attack["accuracy"]:
         damage = 0  # Attack missed!
     elif random.randint(1, 100) <= attack["crit_chance"]:
-        damage *= 2  # Critical Hit!
+        damage *= 5  # Critical Hit!
 
     # 🔻 Boss HP Reduction
     CURRENT_RAID["boss_hp"] = max(0, CURRENT_RAID["boss_hp"] - damage)
