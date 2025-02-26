@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler
-from shivu import application, user_collection, raid_collection, leaderboard_collection
+from shivu import application, user_collection, raid_collection, leaderboard_collection, OWNER_ID, sudo_users
 
 # 📌 RARITY BASED STATS
 RARITY_STATS = {
@@ -26,13 +26,12 @@ ATTACK_TYPES = {
 # 📌 RAID SETTINGS
 MAX_ATTACKS_PER_DAY = 3
 BASE_BOSS_HP = 500000  # Initial boss HP (scales with players)
-BOSS_ROTATION_DAYS = 7
 
-# 📌 CURRENT RAID STATE (DYNAMICALLY UPDATES)
+# 📌 CURRENT RAID STATE
 CURRENT_RAID = {
     "boss_name": "Shenron",
-    "boss_hp": BASE_BOSS_HP,
-    "boss_max_hp": BASE_BOSS_HP,
+    "boss_hp": 0,  # Default 0 so a new raid can start
+    "boss_max_hp": 0,
     "active": False,
     "last_reset": datetime.utcnow()
 }
@@ -45,7 +44,7 @@ async def start_raid(update: Update, context: CallbackContext):
         return
 
     total_players = await user_collection.count_documents({})
-    boss_hp = BASE_BOSS_HP + (total_players * 10000)  # Scales with players
+    boss_hp = BASE_BOSS_HP + (total_players * 10000)  # Scale boss HP with active players
 
     CURRENT_RAID.update({
         "boss_name": "Shenron",
@@ -55,7 +54,7 @@ async def start_raid(update: Update, context: CallbackContext):
         "last_reset": datetime.utcnow()
     })
 
-    await raid_collection.insert_one(CURRENT_RAID)
+    await raid_collection.update_one({}, {"$set": CURRENT_RAID}, upsert=True)
     
     keyboard = [[InlineKeyboardButton("⚔️ Attack the Boss", callback_data="attack_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -130,7 +129,8 @@ async def attack_boss(update: Update, context: CallbackContext):
     # 🏆 BOSS DEFEATED?
     if CURRENT_RAID["boss_hp"] == 0:
         await query.message.edit_text(f"🏆 **{CURRENT_RAID['boss_name']} has been defeated!** 🏆")
-        CURRENT_RAID["active"] = False
+        CURRENT_RAID.update({"active": False, "boss_hp": 0})  # ✅ Reset active state
+        await raid_collection.update_one({}, {"$set": CURRENT_RAID})
         return
 
     # ✅ Update Attack Message
@@ -141,6 +141,19 @@ async def attack_boss(update: Update, context: CallbackContext):
         parse_mode="Markdown"
     )
 
+# 📌 RESET RAID FUNCTION (OWNER ONLY)
+async def reset_raid(update: Update, context: CallbackContext):
+    """Manually resets the raid for bot owners."""
+    user_id = update.effective_user.id
+    if user_id not in sudo_users and user_id != OWNER_ID:
+        await update.message.reply_text("🚫 Only bot owners can reset the raid!")
+        return
+
+    CURRENT_RAID.update({"active": False, "boss_hp": 0})
+    await raid_collection.update_one({}, {"$set": CURRENT_RAID})
+
+    await update.message.reply_text("✅ Raid has been reset! You can now start a new raid.")
+
 # 📌 DAILY RESET FUNCTION
 async def reset_attacks():
     """Resets attack counts for all users at midnight UTC."""
@@ -149,6 +162,7 @@ async def reset_attacks():
 
 # ✅ REGISTER HANDLERS
 application.add_handler(CommandHandler("raid", start_raid))
+application.add_handler(CommandHandler("resetraid", reset_raid))  # ✅ NEW COMMAND
 application.add_handler(CallbackQueryHandler(attack_menu, pattern="^attack_menu$"))
 application.add_handler(CallbackQueryHandler(attack_boss, pattern="^attack:"))
 
