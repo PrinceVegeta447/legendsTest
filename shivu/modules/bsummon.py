@@ -10,15 +10,16 @@ SUMMON_COST_TICKET = 1  # Summon Tickets per summon
 MAX_SUMMONS = 10  # Max summons per pull
 
 RARITY_ORDER = [
-    "⚪ Common", "🟢 Uncommon", "🔵 Rare", "🟣 Extreme",
-    "🟡 Sparking", "🔱 Ultra", "💠 Legends Limited",
-    "🔮 Zenkai", "🏆 Event-Exclusive"
-]
+    "⛔ Common", "🍀 Rare", "🟣 Extreme",  "🟡 Sparking","🔮 Limited Edition", "🔱 Ultimate"  "⛩️ Celestial", "👑 Supreme"]
 
 DROP_RATES = {
-    "⚪ Common": 40, "🟢 Uncommon": 25, "🔵 Rare": 15, "🟣 Extreme": 10,
-    "🟡 Sparking": 6, "🔱 Ultra": 2, "💠 Legends Limited": 1,
-    "🔮 Zenkai": 0.5, "🏆 Event-Exclusive": 0.5
+    "⛔ Common": 40,  # 40% chance
+    "🍀 Rare": 30,  # 30% chance
+    "🟡 Sparking": 24,  # 24% chance
+    "🔮 Limited Edition": 2,  # 2% chance
+    "🔱 Ultimate": 1,  # 1% chance
+    "👑 Supreme": 0.05,  # ~0% chance (extremely rare)
+    "⛩️ Celestial": 0.01  # Almost impossible to summon
 }
 
 ANIMATION_FRAMES = [
