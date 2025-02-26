@@ -107,7 +107,7 @@ async def baddrarity(update: Update, context: CallbackContext) -> None:
             return
 
         rarity = rarity.lower()
-        valid_rarities = ["common", "uncommon", "rare", "extreme", "sparking", "ultra"]
+        valid_rarities = ["common", "rare", "sparkling", "limited edition", "ultimate", "supreme", "celestial"]
         if rarity not in valid_rarities:
             await update.message.reply_text(f"❌ Invalid rarity! Choose from: `{', '.join(valid_rarities)}`", parse_mode="Markdown")
             return
