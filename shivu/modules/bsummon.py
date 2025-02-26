@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, CommandHandler
 from shivu import application, banners_collection, user_collection
 
-SUMMON_COST_CC = 60  # Chrono Crystals per summon
+SUMMON_COST_DIA = 120  # Chrono Crystals per summon
 SUMMON_COST_TICKET = 1  # Summon Tickets per summon
 MAX_SUMMONS = 10  # Max summons per pull
 
@@ -63,12 +63,12 @@ async def summon(update: Update, context: CallbackContext) -> None:
     # ✅ Fetch or create user profile
     user = await user_collection.find_one({'id': user_id})
     if not user:
-        user = {"id": user_id, "chrono_crystals": 0, "summon_tickets": 0, "characters": []}
+        user = {"id": user_id, "diamonds": 0, "summon_tickets": 0, "characters": []}
         await user_collection.insert_one(user)
 
     # ✅ Check user balance
-    total_cost = (SUMMON_COST_CC if currency == "cc" else SUMMON_COST_TICKET) * summon_count
-    balance_key = "chrono_crystals" if currency == "cc" else "summon_tickets"
+    total_cost = (SUMMON_COST_DIA if currency == "dia" else SUMMON_COST_TICKET) * summon_count
+    balance_key = "diamonds" if currency == "dia" else "summon_tickets"
 
     if user.get(balance_key, 0) < total_cost:
         await update.message.reply_text(f"❌ **Not enough {balance_key.replace('_', ' ').title()}!**\nYou need `{total_cost}`.", parse_mode="Markdown")
@@ -108,7 +108,7 @@ async def summon(update: Update, context: CallbackContext) -> None:
         new_tag = "🔥 **NEW!**" if char not in user.get("characters", []) else ""
         summon_results += f"🔹 **{char.get('name', 'Unknown')}** {new_tag}\n" \
                           f"🎖 **Rarity:** {char.get('rarity', '⚪ Common')}\n" \
-                          f"📌 **Category:** {char.get('category', 'N/A')}\n" \
+                          f"📌 **Anime:** {char.get('anime', 'N/A')}\n" \
                           f"━━━━━━━━━━━━━━━━━━━━━━\n"
 
     keyboard = [[InlineKeyboardButton("💠 View Full Collection", switch_inline_query_current_chat=f"collection.{user_id}")]]
