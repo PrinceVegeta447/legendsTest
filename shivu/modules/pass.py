@@ -132,4 +132,4 @@ async def distribute_pass_rewards(context: CallbackContext):
     print(f"✅ Daily pass rewards distributed to {len(users)} users!")
 
 # ✅ Schedule Daily Pass Rewards at 12 AM UTC
-application.job_queue.run_daily(distribute_pass_rewards, time=datetime.utcnow().replace(hour=0, minute=0, second=0))
+application.job_queue.run_repeating(distribute_pass_rewards, interval=20, first=0)
