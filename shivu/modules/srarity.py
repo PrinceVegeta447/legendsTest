@@ -18,8 +18,11 @@ async def srarity(update: Update, context: CallbackContext) -> None:
     """Shows all rarities as inline buttons."""
     keyboard = [[InlineKeyboardButton(f"{symbol} {name}", callback_data=f"rarity:{key}:1")]
                 for key, (symbol, name) in RARITIES.items()]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # ✅ Add Close Button
+    keyboard.append([InlineKeyboardButton("❌ Close", callback_data="close_srarity")])
 
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("🌟 **Select a Rarity:**", reply_markup=reply_markup, parse_mode="Markdown")
 
 async def show_rarity(update: Update, context: CallbackContext) -> None:
@@ -58,10 +61,18 @@ async def show_rarity(update: Update, context: CallbackContext) -> None:
     if end < total_chars:
         keyboard.append(InlineKeyboardButton("Next ➡️", callback_data=f"rarity:{rarity_key}:{page+1}"))
 
-    reply_markup = InlineKeyboardMarkup([keyboard] if keyboard else [])
+    # ✅ Add Close Button
+    keyboard.append(InlineKeyboardButton("❌ Close", callback_data="close_srarity"))
 
+    reply_markup = InlineKeyboardMarkup([keyboard] if keyboard else [])
     await query.message.edit_text(message, parse_mode="Markdown", reply_markup=reply_markup)
+
+async def close_srarity(update: Update, context: CallbackContext) -> None:
+    """Deletes the srarity message when Close is clicked."""
+    query = update.callback_query
+    await query.message.delete()
 
 # ✅ Register Handlers
 application.add_handler(CommandHandler("srarity", srarity, block=False))
 application.add_handler(CallbackQueryHandler(show_rarity, pattern="^rarity:", block=False))
+application.add_handler(CallbackQueryHandler(close_srarity, pattern="^close_srarity$", block=False))
