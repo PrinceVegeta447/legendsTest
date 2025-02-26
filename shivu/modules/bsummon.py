@@ -10,7 +10,7 @@ SUMMON_COST_TICKET = 1  # Summon Tickets per summon
 MAX_SUMMONS = 10  # Max summons per pull
 
 RARITY_ORDER = [
-    "⛔ Common", "🍀 Rare", "🟣 Extreme",  "🟡 Sparking","🔮 Limited Edition", "🔱 Ultimate"  "⛩️ Celestial", "👑 Supreme"]
+    "⛔ Common", "🍀 Rare", "🟣 Extreme",  "🟡 Sparking","🔮 Limited Edition", "🔱 Ultimate", "⛩️ Celestial", "👑 Supreme"]
 
 DROP_RATES = {
     "⛔ Common": 40,  # 40% chance
