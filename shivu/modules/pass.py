@@ -135,4 +135,4 @@ async def distribute_pass_rewards():
         await asyncio.sleep(3600)  # Check every hour
 
 # ✅ Start Reward System
-asyncio.create_task(distribute_pass_rewards())
+       await.asyncio.create_task(distribute_pass_rewards())
