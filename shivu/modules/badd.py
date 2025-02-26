@@ -94,7 +94,7 @@ async def baddrarity(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("❌ Usage: `/baddrarity <banner_id> <rarity>`", parse_mode="Markdown")
             return
 
-        banner_id, rarity = args
+        banner_id, rarity_input = args
         try:
             banner_id = ObjectId(banner_id)
         except:
@@ -106,12 +106,23 @@ async def baddrarity(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("❌ No banner found with this ID!")
             return
 
-        rarity = rarity.lower()
-        valid_rarities = ["common", "rare", "sparkling", "limited edition", "ultimate", "supreme", "celestial"]
-        if rarity not in valid_rarities:
-            await update.message.reply_text(f"❌ Invalid rarity! Choose from: `{', '.join(valid_rarities)}`", parse_mode="Markdown")
+        # ✅ Map user input to correct rarity format
+        rarity_map = {
+            "common": "⛔ Common",
+            "rare": "🍀 Rare",
+            "sparkling": "🟡 Sparking",
+            "limited edition": "🔮 Limited Edition",
+            "ultimate": "🔱 Ultimate",
+            "supreme": "👑 Supreme",
+            "celestial": "⛩️ Celestial"
+        }
+        
+        rarity = rarity_map.get(rarity_input.lower())
+        if not rarity:
+            await update.message.reply_text(f"❌ Invalid rarity! Choose from: `{', '.join(rarity_map.keys())}`", parse_mode="Markdown")
             return
 
+        # ✅ Fetch characters with matching rarity
         rarity_characters = await collection.find({"rarity": rarity}).to_list(length=None)
         if not rarity_characters:
             await update.message.reply_text(f"❌ No `{rarity}` characters found in the database!")
@@ -123,6 +134,7 @@ async def baddrarity(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error: `{str(e)}`", parse_mode="Markdown")
+
 
 async def bdelete(update: Update, context: CallbackContext) -> None:
     """Removes a character from a banner."""
