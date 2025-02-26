@@ -96,6 +96,15 @@ async def modify_inventory(update: Update, context: CallbackContext, add: bool) 
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {str(e)}", parse_mode="HTML")
 
+# ✅ Separate functions for adding/removing inventory
+async def add_inventory(update: Update, context: CallbackContext) -> None:
+    """Command for adding inventory items."""
+    await modify_inventory(update, context, add=True)
+
+async def remove_inventory(update: Update, context: CallbackContext) -> None:
+    """Command for removing inventory items."""
+    await modify_inventory(update, context, add=False)
+
 async def open_shop(update: Update, context: CallbackContext) -> None:
     """Displays the shop where users can spend tokens."""
     query = update.callback_query
