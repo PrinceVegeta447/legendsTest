@@ -1,110 +1,156 @@
-import asyncio
 import random
+import asyncio
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler
-from shivu import application, user_collection, boss_collection, db
+from telegram.ext import CallbackContext, CommandHandler, CallbackQueryHandler
+from shivu import application, user_collection, raid_collection, leaderboard_collection
 
-# ⚔ **Boss Config**
-BOSS_HP_BASE = 500000  # Base HP (scales with players)
-BOSS_DEFENSE = 15000  # Default Boss Defense
-BOSS_ATTACK = 20000  # Boss Counterattack Power
-MAX_FIGHTS_PER_DAY = 3  # Max attacks per user per day
+# 📌 RARITY BASED STATS
+RARITY_STATS = {
+    "⛔ Common": {"hp": 3000, "atk": 500, "def": 400},
+    "🍀 Rare": {"hp": 6000, "atk": 800, "def": 600},
+    "🟡 Sparking": {"hp": 18000, "atk": 1600, "def": 1200},
+    "🔮 Limited Edition": {"hp": 36000, "atk": 3200, "def": 2400},
+    "🔱 Ultimate": {"hp": 72000, "atk": 6400, "def": 4800},
+    "👑 Supreme": {"hp": 144000, "atk": 12800, "def": 9600},
+    "⛩️ Celestial": {"hp": 300000, "atk": 20000, "def": 15000}
+}
 
-# 🛡 **Boss Moves**
-BOSS_MOVES = [
-    "💥 **Boss unleashes a devastating punch!**",
-    "🔥 **Boss charges up and blasts energy waves!**",
-    "⚡ **Boss teleports behind and lands a critical hit!**",
-    "🌪 **Boss creates a massive shockwave attack!**"
-]
+# 📌 ATTACK MOVES
+ATTACK_TYPES = {
+    "light": {"power": 0.8, "crit_chance": 5, "accuracy": 95, "emoji": "⚡"},
+    "heavy": {"power": 1.5, "crit_chance": 15, "accuracy": 75, "emoji": "🔥"},
+    "special": {"power": 2.0, "crit_chance": 25, "accuracy": 60, "emoji": "✨"}
+}
 
-async def start_raid(update: Update, context: CallbackContext) -> None:
-    """Starts a boss fight if the user has a team set up."""
-    user_id = update.effective_user.id
-    user = await user_collection.find_one({'id': user_id})
+# 📌 RAID SETTINGS
+MAX_ATTACKS_PER_DAY = 3
+BASE_BOSS_HP = 500000  # Initial boss HP (scales with players)
+BOSS_ROTATION_DAYS = 7
 
-    if not user or "team" not in user or len(user["team"]) == 0:
-        await update.message.reply_text("❌ **You must first select a team using /maketeam!**", parse_mode="Markdown")
+# 📌 CURRENT RAID STATE (DYNAMICALLY UPDATES)
+CURRENT_RAID = {
+    "boss_name": "Shenron",
+    "boss_hp": BASE_BOSS_HP,
+    "boss_max_hp": BASE_BOSS_HP,
+    "active": False,
+    "last_reset": datetime.utcnow()
+}
+
+# 📌 START RAID FUNCTION
+async def start_raid(update: Update, context: CallbackContext):
+    """Starts a new global boss raid."""
+    if CURRENT_RAID["active"]:
+        await update.message.reply_text("⚠️ A raid is already active!")
         return
 
-    # ✅ Check if the user has remaining fights for the day
-    fight_data = await db.raid_fights.find_one({'id': user_id}) or {"count": 0}
-    if fight_data["count"] >= MAX_FIGHTS_PER_DAY:
-        await update.message.reply_text("❌ **You have used all 3 chances today! Come back tomorrow.**", parse_mode="Markdown")
-        return
+    total_players = await user_collection.count_documents({})
+    boss_hp = BASE_BOSS_HP + (total_players * 10000)  # Scales with players
 
-    # ✅ Fetch or create Boss
-    boss = await boss_collection.find_one({"active": True})
-    if not boss:
-        boss_hp = BOSS_HP_BASE + (len(await user_collection.distinct("id")) * 20000)  # Scale HP based on players
-        boss = {"hp": boss_hp, "defense": BOSS_DEFENSE, "attack": BOSS_ATTACK, "active": True}
-        await boss_collection.insert_one(boss)
+    CURRENT_RAID.update({
+        "boss_name": "Shenron",
+        "boss_hp": boss_hp,
+        "boss_max_hp": boss_hp,
+        "active": True,
+        "last_reset": datetime.utcnow()
+    })
+
+    await raid_collection.insert_one(CURRENT_RAID)
     
-    keyboard = [
-        [InlineKeyboardButton("⚔ Quick Attack", callback_data=f"raidattack:{user_id}:quick")],
-        [InlineKeyboardButton("🔥 Power Strike", callback_data=f"raidattack:{user_id}:power")],
-        [InlineKeyboardButton("💥 Ultimate Blast", callback_data=f"raidattack:{user_id}:ultimate")],
-    ]
-    
+    keyboard = [[InlineKeyboardButton("⚔️ Attack the Boss", callback_data="attack_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     await update.message.reply_text(
-        "🔥 **Boss Battle Started!**\n\n"
-        "🎭 Select your attack:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        f"🐉 **A New Boss Appears!** 🐉\n\n"
+        f"💀 **Boss:** {CURRENT_RAID['boss_name']}\n"
+        f"❤️ **HP:** {CURRENT_RAID['boss_hp']:,}\n"
+        f"⚔️ Use the button below to fight!",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )
+
+# 📌 ATTACK MENU FUNCTION
+async def attack_menu(update: Update, context: CallbackContext):
+    """Shows attack options."""
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    # ✅ Check if user has attacks left
+    user = await user_collection.find_one({"id": user_id}) or {"attacks_left": MAX_ATTACKS_PER_DAY}
+    if user.get("attacks_left", 0) <= 0:
+        await query.answer("❌ You've used all attacks for today!", show_alert=True)
+        return
+
+    keyboard = [
+        [InlineKeyboardButton("⚡ Light Attack", callback_data="attack:light")],
+        [InlineKeyboardButton("🔥 Heavy Attack", callback_data="attack:heavy")],
+        [InlineKeyboardButton("✨ Special Attack", callback_data="attack:special")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.message.edit_text("⚔️ **Choose Your Attack:**", parse_mode="Markdown", reply_markup=reply_markup)
+
+# 📌 ATTACK FUNCTION
+async def attack_boss(update: Update, context: CallbackContext):
+    """Handles attacks on the boss."""
+    query = update.callback_query
+    user_id = query.from_user.id
+    attack_type = query.data.split(":")[1]
+
+    # ✅ Fetch user and their strongest character
+    user = await user_collection.find_one({"id": user_id})
+    if not user or not user.get("characters"):
+        await query.answer("❌ You have no characters to fight!", show_alert=True)
+        return
+
+    character = max(user["characters"], key=lambda c: RARITY_STATS.get(c["rarity"], {}).get("atk", 0))
+    char_stats = RARITY_STATS.get(character["rarity"], RARITY_STATS["⛔ Common"])
+
+    # ✅ Get attack details
+    attack = ATTACK_TYPES[attack_type]
+    damage = int(char_stats["atk"] * attack["power"])
+
+    # 🎯 Accuracy & Critical Hit
+    if random.randint(1, 100) > attack["accuracy"]:
+        damage = 0  # Attack missed!
+    elif random.randint(1, 100) <= attack["crit_chance"]:
+        damage *= 2  # Critical Hit!
+
+    # 🔻 Boss HP Reduction
+    CURRENT_RAID["boss_hp"] = max(0, CURRENT_RAID["boss_hp"] - damage)
+
+    # 🏆 Update Leaderboard
+    await leaderboard_collection.update_one(
+        {"user_id": user_id}, {"$inc": {"damage_dealt": damage}}, upsert=True
+    )
+
+    # ✅ Deduct Attack
+    await user_collection.update_one({"id": user_id}, {"$inc": {"attacks_left": -1}})
+
+    # 🏆 BOSS DEFEATED?
+    if CURRENT_RAID["boss_hp"] == 0:
+        await query.message.edit_text(f"🏆 **{CURRENT_RAID['boss_name']} has been defeated!** 🏆")
+        CURRENT_RAID["active"] = False
+        return
+
+    # ✅ Update Attack Message
+    await query.message.edit_text(
+        f"💥 **{query.from_user.first_name} used {attack['emoji']} {attack_type.title()} Attack!**\n"
+        f"⚔️ **Damage Dealt:** `{damage}`\n"
+        f"🐉 **Boss HP Left:** `{CURRENT_RAID['boss_hp']:,}`",
         parse_mode="Markdown"
     )
 
-async def raid_attack(update: Update, context: CallbackContext) -> None:
-    """Handles attack selection and executes damage calculation."""
-    query = update.callback_query
-    _, user_id, attack_type = query.data.split(":")
-    user_id = int(user_id)
+# 📌 DAILY RESET FUNCTION
+async def reset_attacks():
+    """Resets attack counts for all users at midnight UTC."""
+    await user_collection.update_many({}, {"$set": {"attacks_left": MAX_ATTACKS_PER_DAY}})
+    print("✅ Player attacks have been reset!")
 
-    user = await user_collection.find_one({'id': user_id})
-    if not user or "team" not in user or len(user["team"]) == 0:
-        await query.answer("❌ You have no team!", show_alert=True)
-        return
+# ✅ REGISTER HANDLERS
+application.add_handler(CommandHandler("raid", start_raid))
+application.add_handler(CallbackQueryHandler(attack_menu, pattern="^attack_menu$"))
+application.add_handler(CallbackQueryHandler(attack_boss, pattern="^attack:"))
 
-    team_stats = user["team_stats"]
-    boss = await boss_collection.find_one({"active": True})
-    if not boss:
-        await query.message.edit_text("❌ **No active boss battle!**", parse_mode="Markdown")
-        return
-
-    # ✅ Attack Power Calculation
-    attack_multiplier = {"quick": 0.7, "power": 1.2, "ultimate": 2.0}
-    damage_dealt = int(team_stats["atk"] * attack_multiplier.get(attack_type, 1))
-    
-    # ✅ Boss Counterattack
-    boss_damage = max(5000, boss["attack"] - team_stats["def"] // 2)
-    
-    # ✅ Update Boss HP
-    boss["hp"] = max(0, boss["hp"] - damage_dealt)
-    await boss_collection.update_one({"active": True}, {"$set": {"hp": boss["hp"]}})
-
-    # ✅ Track User Fights
-    await db.raid_fights.update_one({"id": user_id}, {"$inc": {"count": 1}}, upsert=True)
-
-    if boss["hp"] <= 0:
-        await boss_collection.update_one({"active": True}, {"$set": {"active": False}})
-        await query.message.edit_text(
-            f"🎉 **You defeated the Boss!**\n\n"
-            f"🔥 **Final Attack:** {damage_dealt} DMG\n"
-            f"💀 **Boss has fallen!**",
-            parse_mode="Markdown"
-        )
-    else:
-        # ✅ Select Random Boss Attack Animation
-        boss_move = random.choice(BOSS_MOVES)
-
-        await query.message.edit_text(
-            f"⚔ **Battle Update!**\n\n"
-            f"🛡 **Boss HP:** {boss['hp']}\n"
-            f"💥 **You Dealt:** {damage_dealt} DMG\n"
-            f"☠️ **Boss Counterattack:** {boss_damage} DMG\n\n"
-            f"{boss_move}",
-            parse_mode="Markdown"
-        )
-
-# ✅ **Command Handlers**
-application.add_handler(CommandHandler("startraid", start_raid, block=False))
-application.add_handler(CallbackQueryHandler(raid_attack, pattern="^raidattack:", block=False))
+# ✅ SCHEDULE ATTACK RESET DAILY
+application.job_queue.run_daily(reset_attacks, time=datetime.utcnow().replace(hour=0, minute=0, second=0))
