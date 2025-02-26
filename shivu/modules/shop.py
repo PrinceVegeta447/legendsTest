@@ -86,7 +86,7 @@ async def confirm_purchase(update: Update, context: CallbackContext) -> None:
         return  # Ignore messages unrelated to purchase
 
     purchase_type = pending_purchases.pop(user_id)  # Retrieve purchase type
-    coins = user.get('tokens', 0)
+    tokens = user.get('tokens', 0)
 
     try:
         amount = int(update.message.text)
@@ -101,7 +101,7 @@ async def confirm_purchase(update: Update, context: CallbackContext) -> None:
     total_cost = amount * price
     item_name = "Diamonds" if purchase_type == "dia" else "Summon Tickets"
 
-    if coins < total_cost:
+    if tokens < total_cost:
         await update.message.reply_text(
             f"❌ <b>Not enough tokens!</b>\nYou need <code>{total_cost}</code> Tokens for <code>{amount}</code> {item_name}.",
             parse_mode="HTML"
@@ -155,7 +155,7 @@ async def finalize_purchase(update: Update, context: CallbackContext) -> None:
     total_cost = amount * price
     item_name = "diamonds" if purchase_type == "dia" else "Summon Tickets"
 
-    if coins < total_cost:
+    if tokens < total_cost:
         await query.answer(f"❌ Not enough Zeni! Need {total_cost} Tokens.", show_alert=True)
         return
 
