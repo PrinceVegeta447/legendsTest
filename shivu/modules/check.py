@@ -23,13 +23,14 @@ async def check_character(update: Update, context: CallbackContext) -> None:
     message = (
         f"🎴 <b>Character:</b> {name}\n"
         f"🎖 <b>Rarity:</b> {rarity_text}\n"
-        f"📜 <b>Anime:</b> {anime_text}"
+        f"📜 <b>Anime:</b> {anime_text}\n\n"
+        f"👥 <b>Who Owns This Character?</b>"
     )
 
     # ✅ Buttons: Top Collectors | Show Collectors Here
     keyboard = [
-        [InlineKeyboardButton("🏆 Top Collectors", callback_data=f"show_top_collectors:{character_id}")],
-        [InlineKeyboardButton("📍 Show Collectors Here", callback_data=f"show_local_collectors:{character_id}")]
+        [InlineKeyboardButton("🏆 Top Collectors", callback_data=f"top_collectors:{character_id}")],
+        [InlineKeyboardButton("📍 Show Collectors Here", callback_data=f"local_collectors:{character_id}")]
     ]
 
     await update.message.reply_photo(
@@ -66,7 +67,7 @@ async def show_top_collectors(update: Update, context: CallbackContext) -> None:
         return
 
     # ✅ Format the Message
-    message = "🏆 <b>Top Collectors for this Character:</b>\n\n"
+    message = "🏆 <b>Top Collectors for this Character:</b>\n━━━━━━━━━━━━━━━━━━━━\n"
     for i, user in enumerate(collectors, 1):
         message += f"{i}. {user['first_name']} - [{user['count']}] \n"
 
@@ -77,13 +78,20 @@ async def show_local_collectors(update: Update, context: CallbackContext) -> Non
     query = update.callback_query
     await query.answer()  # Acknowledge the callback
     _, character_id = query.data.split(":")
-    group_id = query.message.chat.id
+    group_id = query.message.chat.id  # ✅ Fetch current group ID
 
-    # ✅ Fetch all users who own the character
+    # ✅ Fetch all users in this group who own the character
     pipeline = [
-        {"$match": {"characters.id": character_id, "groups": group_id}},  
+        {"$match": {"characters.id": character_id}},  
         {"$unwind": "$characters"},  
         {"$match": {"characters.id": character_id}},  
+        {"$lookup": {
+            "from": "group_user_totals",  # ✅ Fetch users **only from this group**
+            "localField": "id",
+            "foreignField": "user_id",
+            "as": "group_users"
+        }},
+        {"$match": {"group_users.group_id": group_id}},  
         {"$group": {
             "_id": "$id",
             "count": {"$sum": 1},  
@@ -100,7 +108,7 @@ async def show_local_collectors(update: Update, context: CallbackContext) -> Non
         return
 
     # ✅ Format the Message
-    message = "📍 <b>Collectors in this Group:</b>\n\n"
+    message = "📍 <b>Collectors in this Group:</b>\n━━━━━━━━━━━━━━━━━━━━\n"
     for i, user in enumerate(collectors, 1):  
         message += f"{i}. {user['first_name']} - [{user['count']}] \n"
 
@@ -108,5 +116,5 @@ async def show_local_collectors(update: Update, context: CallbackContext) -> Non
 
 # ✅ Register Handlers
 application.add_handler(CommandHandler("check", check_character, block=False))
-application.add_handler(CallbackQueryHandler(show_top_collectors, pattern="^show_top_collectors:", block=False))
-application.add_handler(CallbackQueryHandler(show_local_collectors, pattern="^show_local_collectors:", block=False))
+application.add_handler(CallbackQueryHandler(show_top_collectors, pattern="^top_collectors:", block=False))
+application.add_handler(CallbackQueryHandler(show_local_collectors, pattern="^local_collectors:", block=False))
