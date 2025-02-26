@@ -227,7 +227,7 @@ async def guess(update: Update, context: CallbackContext) -> None:
 
         # ✅ Assign rewards based on rarity
         if character_rarity in REWARD_TABLE:
-            token_min, token_max, token_min, dia_max, dia_min = REWARD_TABLE[character_rarity]
+            token_min, token_max, dia_min, dia_max = REWARD_TABLE[character_rarity]
             token_won = random.randint(token_min, token_max)
             dia_won = random.randint(dia_min, dia_max)
         else:
