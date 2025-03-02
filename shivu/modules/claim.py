@@ -6,9 +6,18 @@ from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, user_collection, collection
 
 # 📌 Claim Limits
-MAX_CLAIMS = 1  # Users can claim once per day
+MAX_CLAIMS = 2  # Users can claim twice per day
 COOLDOWN_TIME = 24 * 60 * 60  # 24-hour cooldown
 GIF_FILE_ID = "BAACAgUAAyEFAASFUB9IAAIQAAFnsKpbDDyBb9emePMuEFN7gugV2QACIhMAApS5iFUcNzRBeFCYwTYE"
+
+# 🎲 **Rarity-Based Drop Rates**
+CLAIM_RATES = {
+    "⛔ Common": 50, # 50% chance 
+    "🍀 Rare": 30, # 30% chance 
+    "🟡 Sparking": 15,  # 15% chance
+    "🔮 Limited Edition": 5,  # 5% chance
+}
+EXCLUDED_RARITIES = ["👑 Supreme", "⛩️ Celestial", "🔱 Ultimate"]  # Not claimable
 
 # 🔴 Track Active Claims to Prevent Spam
 active_claims = set()
@@ -19,7 +28,7 @@ async def claim(update: Update, context: CallbackContext) -> None:
 
     # 🚫 **Check if user is already claiming**
     if user_id in active_claims:
-        await update.message.reply_text("❌ **Teri gand fad dunga bhosdike 🤬🤬**")
+        await update.message.reply_text("❌ Teri gand fad dunga bhosdike 🤬🤬")
         return
 
     # 🔴 Mark user as claiming
@@ -55,13 +64,17 @@ async def claim(update: Update, context: CallbackContext) -> None:
             )
             return
 
-        # ✅ Fetch a random character from the database
-        total_characters = await collection.count_documents({})
-        if total_characters == 0:
-            await update.message.reply_text("❌ **No characters available to claim!**")
+        # ✅ Fetch Characters Based on Drop Rates
+        weighted_characters = []
+        for rarity, weight in CLAIM_RATES.items():
+            characters = await collection.find({"rarity": rarity}).to_list(length=None)
+            weighted_characters.extend(characters * weight)
+
+        if not weighted_characters:
+            await update.message.reply_text("❌ **No valid characters available to claim!**")
             return
 
-        random_character = await collection.find_one({}, skip=random.randint(0, total_characters - 1))
+        random_character = random.choice(weighted_characters)
 
         # ✅ Send GIF animation
         gif_message = await update.message.reply_animation(animation=GIF_FILE_ID, caption="⚡ **Claiming...** ⚡")
