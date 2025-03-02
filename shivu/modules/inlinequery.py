@@ -22,7 +22,8 @@ user_collection_cache = TTLCache(maxsize=10000, ttl=60)
 
 async def inlinequery(update: Update, context: CallbackContext) -> None:
     query = update.inline_query.query
-    offset = int(update.inline_query.offset) if update.inline_query.offset else 0
+    offset = int(update.inline_query.offset) if update.inline_query.offset else 0  # Get current offset
+    limit = 50  # Max results per query
 
     # ✅ Prevent Timeout by Answering Early
     await update.inline_query.answer([], cache_time=1)
@@ -48,12 +49,14 @@ async def inlinequery(update: Update, context: CallbackContext) -> None:
     else:
         if query:
             regex = re.compile(query, re.IGNORECASE)
-            all_characters = await collection.find({"$or": [{"name": regex}, {"anime": regex}]}).to_list(length=50)
+            all_characters = await collection.find(
+                {"$or": [{"name": regex}, {"anime": regex}]}
+            ).skip(offset).limit(limit).to_list(length=limit)  # ✅ Skip & limit for pagination
         else:
             if 'all_characters' in all_characters_cache:
                 all_characters = all_characters_cache['all_characters']
             else:
-                all_characters = await collection.find({}).to_list(length=50)
+                all_characters = await collection.find({}).skip(offset).limit(limit).to_list(length=limit)
                 all_characters_cache['all_characters'] = all_characters
 
     if not all_characters:
@@ -94,8 +97,11 @@ async def inlinequery(update: Update, context: CallbackContext) -> None:
             )
         )
 
-    # ✅ Send Final Results
-    await update.inline_query.answer(results, cache_time=5)
+    # ✅ Implement Pagination
+    next_offset = str(offset + limit) if len(all_characters) == limit else ""  # Send next offset only if more results exist
+
+    # ✅ Send Final Results with Pagination
+    await update.inline_query.answer(results, cache_time=5, next_offset=next_offset)
 
 # ✅ Register the Inline Query Handler
 application.add_handler(InlineQueryHandler(inlinequery, block=False))
