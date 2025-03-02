@@ -1,5 +1,8 @@
-from telegram import Update, Chat, User
-from telegram.ext import CommandHandler, CallbackContext
+import asyncio
+import random
+from telegram import Update, Chat, User, ChatPermissions
+from telegram.ext import CommandHandler, CallbackContext, MessageHandler, filters
+from shivu import application
 
 async def mute(update: Update, context: CallbackContext):
     if not update.message.reply_to_message:
