@@ -59,7 +59,6 @@ import asyncio
 # Lock system to prevent race conditions in high-traffic groups
 locks = {}
 
-
 async def message_counter(update: Update, context: CallbackContext) -> None:
     chat_id = str(update.effective_chat.id)
     user_id = update.effective_user.id
@@ -80,22 +79,11 @@ async def message_counter(update: Update, context: CallbackContext) -> None:
         if chat_id not in message_counts:
             message_counts[chat_id] = 0
 
-        # ✅ Check if the message contains valid content (countable messages)
+        # ✅ Check if the message contains valid content
         message = update.effective_message
-        if message:
-            if (
-                message.text  # Regular text messages (including emoji-only messages)
-                or message.sticker  # Stickers
-                or message.animation  # GIFs
-                or message.photo  # Images
-                or message.video  # Videos
-                or message.document  # Files like PDFs
-                or message.audio  # Audio files
-                or message.voice  # Voice messages
-                or message.video_note  # Video notes
-                or message.entities  # Entities like mentions, hashtags, etc.
-            ):
-                message_counts[chat_id] += 1  # ✅ Count all messages
+        if message:  
+            # Count all possible message types
+            message_counts[chat_id] += 1  
 
         # ✅ Debugging Log
         print(f"🔍 [DEBUG] Group: {chat_id} | Messages: {message_counts.get(chat_id, 0)} | Drop at: {message_frequency}")
@@ -105,6 +93,7 @@ async def message_counter(update: Update, context: CallbackContext) -> None:
             print(f"🟢 [DEBUG] Triggering send_image() in {chat_id}")
             await send_image(update, context)  # Call send_image properly
             message_counts[chat_id] = 0  # Reset counter
+
 
 
 RESTRICTED_RARITIES = ["👑 Supreme", "⛩️ Celestial"]
