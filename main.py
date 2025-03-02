@@ -79,11 +79,13 @@ async def message_counter(update: Update, context: CallbackContext) -> None:
         if chat_id not in message_counts:
             message_counts[chat_id] = 0
 
-        # ✅ Check if the message contains valid content
+        # ✅ Check if message exists
         message = update.effective_message
-        if message:  
-            # Count all possible message types
-            message_counts[chat_id] += 1  
+        if message and (message.text or message.caption or message.sticker or message.animation or 
+                        message.photo or message.video or message.document or message.audio or 
+                        message.voice or message.video_note or message.entities or message.contact or 
+                        message.location or message.poll or message.game or message.dice):
+            message_counts[chat_id] += 1  # ✅ Count all messages
 
         # ✅ Debugging Log
         print(f"🔍 [DEBUG] Group: {chat_id} | Messages: {message_counts.get(chat_id, 0)} | Drop at: {message_frequency}")
