@@ -1,0 +1,12 @@
+componentConfig:
+  name: my-python-app
+  runtime: Python
+  source:
+    type: GitHub
+    repoOwner: PrinceVegeta447 
+    repoName: legendsTest
+    branch: main
+  build:
+    command: pip install -r requirements.txt
+  run:
+    command: python main.py
