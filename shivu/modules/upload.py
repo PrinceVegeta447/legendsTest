@@ -1,148 +1,126 @@
 import requests
 from pymongo import ReturnDocument
-from telegram import Update
-from telegram.ext import CommandHandler, CallbackContext
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler
 from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANNEL_ID, SUPPORT_CHAT, user_collection
 
-# ✅ Correct command usage instructions
-WRONG_FORMAT_TEXT = """❌ Incorrect Format!
-Use: `/upload <file_id> <character-name> <rarity-number> <anime-number>`
-
-🎖️ **Rarity Guide:**  
-1. Common  
-2. Rare  
-3. Extreme  
-4. Sparkling  
-5. Limited Edition  
-6. Ultimate  
-7. Celestial  
-8. Supreme
-
-🎭 **Anime Guide:**
-"1": "🐉 Dragon Ball",
-"2": "🏴‍☠️ One Piece
-"3": "🍃 Naruto"
-"4": "⚔️ Bleach",
-"5": "⛩️ Demon Slayer",
-"6": "🛡️ Attack on Titan",
-"7": "👊 Jujutsu Kaisen",
-"8": "🦸‍♂️ My Hero Academia",
-"9": "🎯 Hunter x Hunter"
-            """
+# ✅ Character Details Mapping
+RARITY_MAP = {
+    "1": "⛔ Common", "2": "🍀 Rare", "3": "🟣 Extreme", "4": "🟡 Sparking",
+    "5": "🔮 Limited Edition", "6": "🔱 Ultimate", "7": "⛩️ Celestial", "8": "👑 Supreme"
+}
+ANIME_MAP = {
+    "1": "🐉 Dragon Ball", "2": "🏴‍☠️ One Piece", "3": "🍃 Naruto",
+    "4": "⚔️ Bleach", "5": "⛩️ Demon Slayer", "6": "🛡️ Attack on Titan",
+    "7": "👊 Jujutsu Kaisen", "8": "🦸‍♂️ My Hero Academia", "9": "🎯 Hunter x Hunter"
+}
 
 async def get_next_sequence_number(sequence_name):
-    sequence_collection = db.sequences
-    sequence_document = await sequence_collection.find_one_and_update(
-        {'_id': sequence_name}, 
-        {'$inc': {'sequence_value': 1}}, 
-        upsert=True,
-        return_document=ReturnDocument.AFTER
+    """Generate a unique character ID."""
+    sequence_document = await db.sequences.find_one_and_update(
+        {'_id': sequence_name}, {'$inc': {'sequence_value': 1}}, 
+        upsert=True, return_document=ReturnDocument.AFTER
     )
-    return sequence_document['sequence_value']
+    return str(sequence_document['sequence_value']).zfill(3)
 
-
-async def upload(update: Update, context: CallbackContext) -> None:
+async def start_upload(update: Update, context: CallbackContext):
+    """Handles the character upload request with enhanced UX."""
     user_id = update.effective_user.id
-
-    # 🔒 Check if user has permission
     if user_id not in sudo_users and user_id != OWNER_ID:
         await update.message.reply_text("🚫 You don't have permission to upload characters!")
         return
 
     try:
         args = context.args
-        if len(args) < 4:  # Minimum required arguments
-            await update.message.reply_text(WRONG_FORMAT_TEXT)
+        message = update.message
+
+        # ✅ Check if the user replied to an image
+        if message.reply_to_message and message.reply_to_message.photo:
+            file_id = message.reply_to_message.photo[-1].file_id
+        elif len(args) >= 3:
+            file_id = args[0]  # File ID given directly
+        else:
+            await message.reply_text("❌ Reply to an image or provide a valid file ID!")
             return
 
-        file_id = args[0]  # First argument is file_id
-        rarity_input = args[-2]  # Second-last argument is rarity
-        anime_input = args[-1]  # Last argument is category
-        character_name = ' '.join(args[1:-2]).replace('-', ' ').title()  # Everything in between is the name
+        # ✅ Extract character details
+        rarity_input, anime_input = args[-2], args[-1]
+        character_name = ' '.join(args[1:-2]).replace('-', ' ').title()
 
-        # ✅ Check if character is exclusive
-        is_exclusive = "exclusive" in args
-        if is_exclusive:
-            anime_input += " (Exclusive)"  # Append to category for database clarity
-
-        # ✅ Validate file_id by checking if it exists using Telegram's API
-        try:
-            await context.bot.get_file(file_id)  # Attempt to get the file from Telegram servers
-        except Exception:
-            await update.message.reply_text("❌ Invalid File ID. Please provide correct file id.")
-            return
-
-        rarity_map = {
-            "1": "⛔ Common",
-            "2": "🍀 Rare",
-            "3": "🟣 Extreme",
-            "4": "🟡 Sparking",
-            "5": "🔮 Limited Edition",
-            "6": "🔱 Ultimate",
-            "7": "⛩️ Celestial",
-            "8": "👑 Supreme"
-        }
-        rarity = rarity_map.get(rarity_input)
+        # ✅ Validate Rarity
+        rarity = RARITY_MAP.get(rarity_input, None)
         if not rarity:
-            await update.message.reply_text("❌ Invalid Rarity. Use numbers: 1-8.")
+            await message.reply_text(f"❌ Invalid Rarity! Choose from: {', '.join(RARITY_MAP.values())}")
             return
 
-        anime_map = {
-            "1": "🐉 Dragon Ball",
-            "2": "🏴‍☠️ One Piece",
-            "3": "🍃 Naruto",
-            "4": "⚔️ Bleach",
-            "5": "⛩️ Demon Slayer",
-            "6": "🛡️ Attack on Titan",
-            "7": "👊 Jujutsu Kaisen",
-            "8": "🦸‍♂️ My Hero Academia",
-            "9": "🎯 Hunter x Hunter"
-        }
-        
-        anime = anime_map.get(anime_input)
+        # ✅ Validate Anime
+        anime = ANIME_MAP.get(anime_input, None)
         if not anime:
-            await update.message.reply_text("❌ Invalid Anime. Use numbers: 1-9.")
+            await message.reply_text(f"❌ Invalid Anime! Choose from: {', '.join(ANIME_MAP.values())}")
             return
 
-        char_id = str(await get_next_sequence_number("character_id")).zfill(3)
+        # ✅ Ask for Confirmation Before Uploading
+        char_id = await get_next_sequence_number("character_id")
+        caption = (
+            f"📜 **Confirm Character Upload**\n\n"
+            f"🏆 **Name:** {character_name}\n"
+            f"🎖 **Rarity:** {rarity}\n"
+            f"🎭 **Anime:** {anime}\n"
+            f"🆔 **Character ID:** {char_id}\n\n"
+            f"✅ Do you want to upload this character?"
+        )
+        keyboard = [
+            [InlineKeyboardButton("✅ Yes, Upload", callback_data=f"confirm_upload:{file_id}:{character_name}:{rarity}:{anime}:{char_id}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_upload")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-        character = {
-            'file_id': file_id,
-            'name': character_name,
-            'rarity': rarity,
-            'anime': anime,
-            'id': char_id,
-            'exclusive': is_exclusive  # Mark as exclusive if applicable
-        }
-
-        try:
-            caption_text = (
-                f"🏆 **New Character Added!**\n\n"
-                f"🔥 **Character:** {character_name}\n"
-                f"🎖️ **Rarity:** {rarity}\n"
-                f"🎭 **Anime:** {anime}\n"
-                f"🆔 **ID:** {char_id}\n\n"
-                f"👤 Added by [{update.effective_user.first_name}](tg://user?id={user_id})"
-            )
-
-            if is_exclusive:
-                caption_text += "\n🚀 **Exclusive Character** 🚀"
-
-            message = await context.bot.send_photo(
-                chat_id=CHARA_CHANNEL_ID,
-                photo=file_id,
-                caption=caption_text,
-                parse_mode='Markdown'
-            )
-
-            character["message_id"] = message.message_id
-            await collection.insert_one(character)
-            await update.message.reply_text(f"✅ `{character_name}` successfully added!")
-        except Exception as e:
-            await update.message.reply_text(f"⚠️ Character added, but couldn't send image. Error: {str(e)}")
+        await message.reply_photo(photo=file_id, caption=caption, reply_markup=reply_markup, parse_mode="Markdown")
 
     except Exception as e:
         await update.message.reply_text(f"❌ Upload failed! Error: {str(e)}")
+
+async def confirm_upload(update: Update, context: CallbackContext):
+    """Uploads the character to the database after user confirmation."""
+    query = update.callback_query
+    await query.answer()
+
+    _, file_id, character_name, rarity, anime, char_id = query.data.split(":")
+    
+    try:
+        character = {
+            "file_id": file_id, "name": character_name, "rarity": rarity,
+            "anime": anime, "id": char_id
+        }
+
+        message = await context.bot.send_photo(
+            chat_id=CHARA_CHANNEL_ID,
+            photo=file_id,
+            caption=(
+                f"🏆 **New Character Added!**\n\n"
+                f"🔥 **Name:** {character_name}\n"
+                f"🎖 **Rarity:** {rarity}\n"
+                f"🎭 **Anime:** {anime}\n"
+                f"🆔 **Character ID:** {char_id}\n\n"
+                f"👤 Added by [{query.from_user.first_name}](tg://user?id={query.from_user.id})"
+            ),
+            parse_mode='Markdown'
+        )
+
+        character["message_id"] = message.message_id
+        await collection.insert_one(character)
+
+        await query.edit_message_caption(f"✅ `{character_name}` successfully uploaded!", parse_mode="Markdown")
+
+    except Exception as e:
+        await query.message.reply_text(f"❌ Upload failed! Error: {str(e)}")
+
+async def cancel_upload(update: Update, context: CallbackContext):
+    """Cancels the character upload process."""
+    query = update.callback_query
+    await query.answer()
+    await query.message.delete()
+
 
 # ✅ Function to delete a character
 async def delete(update: Update, context: CallbackContext) -> None:
@@ -237,6 +215,8 @@ async def update(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Update failed! Error: {str(e)}")
 
 # ✅ Add command handlers
-application.add_handler(CommandHandler("upload", upload, block=False))
 application.add_handler(CommandHandler("delete", delete, block=False))
 application.add_handler(CommandHandler("update", update, block=False))
+application.add_handler(CommandHandler("upload", start_upload, block=False))
+application.add_handler(CallbackQueryHandler(confirm_upload, pattern="^confirm_upload:", block=False))
+application.add_handler(CallbackQueryHandler(cancel_upload, pattern="^cancel_upload$", block=False))
