@@ -5,32 +5,21 @@ from html import escape
 import math
 from shivu import collection, user_collection, application, db
 
-DEFAULT_SORT = "rarity"  # Default sorting is now Rarity
+DEFAULT_SORT = "rarity"  # Default sorting
 
 ANIME_ICONS = {
-    "🐉 Dragon Ball": "🐉",
-    "🏴‍☠️ One Piece": "🏴‍☠️",
-    "🍃 Naruto": "🍃",
-    "⚔️ Bleach": "⚔️",
-    "⛩️ Demon Slayer": "⛩️",
-    "🛡️ Attack on Titan": "🛡️",
-    "👊 Jujutsu Kaisen": "👊",
-    "🦸‍♂️ My Hero Academia": "🦸‍♂️",
-    "🎯 Hunter x Hunter": "🎯"
+    "🐉 Dragon Ball": "🐉", "🏴‍☠️ One Piece": "🏴‍☠️", "🍃 Naruto": "🍃",
+    "⚔️ Bleach": "⚔️", "⛩️ Demon Slayer": "⛩️", "🛡️ Attack on Titan": "🛡️",
+    "👊 Jujutsu Kaisen": "👊", "🦸‍♂️ My Hero Academia": "🦸‍♂️", "🎯 Hunter x Hunter": "🎯"
 }
 
 RARITY_ICONS = {
-    "⛔ Common": "⛔",
-    "🍀 Rare": "🍀",
-    "🟡 Sparking": "🟡",
-    "🔱 Ultimate": "🔱",
-    "👑 Supreme": "👑",
-    "🔮 Limited Edition": "🔮",
-    "⛩️ Celestial": "⛩️"
+    "⛔ Common": "⛔", "🍀 Rare": "🍀", "🟡 Sparking": "🟡", "🔱 Ultimate": "🔱",
+    "👑 Supreme": "👑", "🔮 Limited Edition": "🔮", "⛩️ Celestial": "⛩️"
 }
 
 async def harem(update: Update, context: CallbackContext, page=0, query=None) -> None:
-    """Displays user's character collection with proper pagination."""
+    """Displays user's character collection with a modern UI."""
     user_id = update.effective_user.id
     first_name = escape(update.effective_user.first_name)
     user = await user_collection.find_one({'id': user_id})
@@ -57,44 +46,47 @@ async def harem(update: Update, context: CallbackContext, page=0, query=None) ->
             await update.message.reply_text(harem_message, parse_mode="HTML", reply_markup=reply_markup)
 
 async def generate_harem_message(user, page, first_name):
-    """Generates harem message and inline keyboard for pagination."""
+    """Generates harem message with enhanced UI."""
     user_id = user['id']
     user_pref = await db.user_sorting.find_one({'user_id': user_id}) or {"sort_by": DEFAULT_SORT}
     sort_by = user_pref["sort_by"]
 
-    characters = sorted(user["characters"], key=lambda x: (x.get(sort_by, "Unknown"), x["id"]))
+    characters = sorted(user["characters"], key=lambda x: (x.get(sort_by, "Unknown"), x["id"]), reverse=True)
     character_counts = {k: len(list(v)) for k, v in groupby(characters, key=lambda x: x["id"])}
     unique_characters = list({character['id']: character for character in characters}.values())
 
     total_pages = max(1, math.ceil(len(unique_characters) / 15))
     page = max(0, min(page, total_pages - 1))
 
-    # ✅ Display first name instead of full name
+    # ✅ **Modern UI Header with Progress**
+    progress_bar = f"[{'■' * (page+1)}{'□' * (total_pages - (page+1))}]"
     harem_message = (
         f"📜 <b>{first_name}'s Collection</b>\n"
-        f"📄 <b>Page {page+1}/{total_pages}</b>\n"
+        f"📄 <b>Page {page+1}/{total_pages}</b> {progress_bar}\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
     )
 
     current_characters = unique_characters[page * 15 : (page + 1) * 15]
     grouped_characters = {k: list(v) for k, v in groupby(current_characters, key=lambda x: x.get(sort_by, "Unknown"))}
 
-    for anime, characters in grouped_characters.items():
+    for rarity, characters in grouped_characters.items():
         owned_count = len(characters)
-        total_count = await collection.count_documents({sort_by: anime}) or 1  # Prevent division by zero
+        total_count = await collection.count_documents({sort_by: rarity}) or 1  # Prevent division by zero
+        rarity_icon = RARITY_ICONS.get(rarity, "🔹")
 
-        harem_message += f"\n🫧 <b>{RARITY_ICONS.get(anime, '')} {anime}</b> ({owned_count}/{total_count})\n\n"
+        harem_message += f"\n{rarity_icon} <b>{rarity}</b> ({owned_count}/{total_count})\n\n"
 
         for character in characters:
             count = character_counts[character["id"]]
-            rarity_icon = RARITY_ICONS.get(character["rarity"], "🔹")
-            harem_message += f"[{character['id']}] {rarity_icon} {character['name']}  [×{count}]\n"
+            anime_icon = ANIME_ICONS.get(character["anime"], "🎭")
+            harem_message += f"🔹 [{character['id']}] {anime_icon} <b>{character['name']}</b> [×{count}]\n"
 
     total_count = len(user['characters'])
     keyboard = [
-        [InlineKeyboardButton(f"📜 See Collection ({total_count})", switch_inline_query_current_chat=f"collection.{user_id}")]
+        [InlineKeyboardButton(f"📜 View Full Collection ({total_count})", switch_inline_query_current_chat=f"collection.{user_id}")]
     ]
 
+    # ✅ **Modern Pagination Buttons**
     if total_pages > 1:
         nav_buttons = []
         if page > 0:
@@ -129,14 +121,14 @@ async def harem_callback(update: Update, context: CallbackContext) -> None:
     await harem(update, context, page=page, query=query)
 
 async def sort_command(update: Update, context: CallbackContext) -> None:
-    """Sends sorting options."""
+    """Sends sorting options with a modern UI."""
     keyboard = [
-        [InlineKeyboardButton("📌 Sort by Rarity", callback_data="sort:rarity")],
-        [InlineKeyboardButton("📂 Sort by Anime", callback_data="sort:anime")],
+        [InlineKeyboardButton("🎖 Sort by Rarity", callback_data="sort:rarity")],
+        [InlineKeyboardButton("🎭 Sort by Anime", callback_data="sort:anime")],
         [InlineKeyboardButton("🔤 Sort Alphabetically", callback_data="sort:name")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("🔀 Choose how you want to sort your collection:", reply_markup=reply_markup)
+    await update.message.reply_text("🔀 **Choose Sorting Method:**", reply_markup=reply_markup, parse_mode="Markdown")
 
 async def sort_callback(update: Update, context: CallbackContext) -> None:
     """Handles sorting preference and saves it in the database."""
@@ -146,10 +138,10 @@ async def sort_callback(update: Update, context: CallbackContext) -> None:
 
     await db.user_sorting.update_one({"user_id": user_id}, {"$set": {"sort_by": sort_by}}, upsert=True)
 
-    await query.answer(f"✅ Collection will now be sorted by {sort_by.capitalize()}!")
-    await query.edit_message_text(f"✅ Collection is now sorted by **{sort_by.capitalize()}**. Use /collection to view.")
+    await query.answer(f"✅ Collection sorted by {sort_by.capitalize()}!")
+    await query.edit_message_text(f"✅ Collection now sorted by **{sort_by.capitalize()}**. Use `/collection` to view.", parse_mode="Markdown")
 
-# ✅ Register Handlers
+# ✅ **Register Handlers**
 application.add_handler(CommandHandler("collection", harem, block=False))
 application.add_handler(CallbackQueryHandler(harem_callback, pattern="^harem", block=False))
 application.add_handler(CommandHandler("sort", sort_command, block=False))
