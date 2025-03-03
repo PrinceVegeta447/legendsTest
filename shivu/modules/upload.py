@@ -1,8 +1,8 @@
 import requests
 from pymongo import ReturnDocument
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackContext, CallbackQueryHandler
-from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANNEL_ID, SUPPORT_CHAT, user_collection
+from telegram import Update
+from telegram.ext import CommandHandler, CallbackContext
+from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANNEL_ID
 
 # ✅ Character Details Mapping
 RARITY_MAP = {
@@ -23,9 +23,11 @@ async def get_next_sequence_number(sequence_name):
     )
     return str(sequence_document['sequence_value']).zfill(3)
 
-async def start_upload(update: Update, context: CallbackContext):
-    """Handles the character upload request with enhanced UX."""
+async def upload(update: Update, context: CallbackContext):
+    """Handles direct character upload."""
     user_id = update.effective_user.id
+
+    # 🔒 **Permission Check**
     if user_id not in sudo_users and user_id != OWNER_ID:
         await update.message.reply_text("🚫 You don't have permission to upload characters!")
         return
@@ -34,7 +36,7 @@ async def start_upload(update: Update, context: CallbackContext):
         args = context.args
         message = update.message
 
-        # ✅ Check if the user replied to an image
+        # ✅ **Check if user replied to an image**
         if message.reply_to_message and message.reply_to_message.photo:
             file_id = message.reply_to_message.photo[-1].file_id
         elif len(args) >= 3:
@@ -43,56 +45,32 @@ async def start_upload(update: Update, context: CallbackContext):
             await message.reply_text("❌ Reply to an image or provide a valid file ID!")
             return
 
-        # ✅ Extract character details
+        # ✅ **Extract character details**
         rarity_input, anime_input = args[-2], args[-1]
         character_name = ' '.join(args[1:-2]).replace('-', ' ').title()
 
-        # ✅ Validate Rarity
+        # ✅ **Validate Rarity**
         rarity = RARITY_MAP.get(rarity_input, None)
         if not rarity:
             await message.reply_text(f"❌ Invalid Rarity! Choose from: {', '.join(RARITY_MAP.values())}")
             return
 
-        # ✅ Validate Anime
+        # ✅ **Validate Anime**
         anime = ANIME_MAP.get(anime_input, None)
         if not anime:
             await message.reply_text(f"❌ Invalid Anime! Choose from: {', '.join(ANIME_MAP.values())}")
             return
 
-        # ✅ Ask for Confirmation Before Uploading
+        # ✅ **Generate Character ID**
         char_id = await get_next_sequence_number("character_id")
-        caption = (
-            f"📜 **Confirm Character Upload**\n\n"
-            f"🏆 **Name:** {character_name}\n"
-            f"🎖 **Rarity:** {rarity}\n"
-            f"🎭 **Anime:** {anime}\n"
-            f"🆔 **Character ID:** {char_id}\n\n"
-            f"✅ Do you want to upload this character?"
-        )
-        keyboard = [
-            [InlineKeyboardButton("✅ Yes, Upload", callback_data=f"confirm_upload:{file_id}:{character_name}:{rarity}:{anime}:{char_id}")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_upload")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
 
-        await message.reply_photo(photo=file_id, caption=caption, reply_markup=reply_markup, parse_mode="Markdown")
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Upload failed! Error: {str(e)}")
-
-async def confirm_upload(update: Update, context: CallbackContext):
-    """Uploads the character to the database after user confirmation."""
-    query = update.callback_query
-    await query.answer()
-
-    _, file_id, character_name, rarity, anime, char_id = query.data.split(":")
-    
-    try:
+        # ✅ **Upload to Database**
         character = {
             "file_id": file_id, "name": character_name, "rarity": rarity,
             "anime": anime, "id": char_id
         }
 
+        # ✅ **Send Character Announcement**
         message = await context.bot.send_photo(
             chat_id=CHARA_CHANNEL_ID,
             photo=file_id,
@@ -102,7 +80,7 @@ async def confirm_upload(update: Update, context: CallbackContext):
                 f"🎖 **Rarity:** {rarity}\n"
                 f"🎭 **Anime:** {anime}\n"
                 f"🆔 **Character ID:** {char_id}\n\n"
-                f"👤 Added by [{query.from_user.first_name}](tg://user?id={query.from_user.id})"
+                f"👤 Added by [{update.effective_user.first_name}](tg://user?id={user_id})"
             ),
             parse_mode='Markdown'
         )
@@ -110,19 +88,12 @@ async def confirm_upload(update: Update, context: CallbackContext):
         character["message_id"] = message.message_id
         await collection.insert_one(character)
 
-        await query.edit_message_caption(f"✅ `{character_name}` successfully uploaded!", parse_mode="Markdown")
+        await update.message.reply_text(f"✅ `{character_name}` successfully added!")
 
     except Exception as e:
-        await query.message.reply_text(f"❌ Upload failed! Error: {str(e)}")
+        await update.message.reply_text(f"❌ Upload failed! Error: {str(e)}")
 
-async def cancel_upload(update: Update, context: CallbackContext):
-    """Cancels the character upload process."""
-    query = update.callback_query
-    await query.answer()
-    await query.message.delete()
-
-
-# ✅ Function to delete a character
+# Function to delete a character
 async def delete(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id not in sudo_users and update.effective_user.id != OWNER_ID:
         await update.message.reply_text("🚫 Only bot owners can delete characters!")
@@ -217,6 +188,4 @@ async def update(update: Update, context: CallbackContext) -> None:
 # ✅ Add command handlers
 application.add_handler(CommandHandler("delete", delete, block=False))
 application.add_handler(CommandHandler("update", update, block=False))
-application.add_handler(CommandHandler("upload", start_upload, block=False))
-application.add_handler(CallbackQueryHandler(confirm_upload, pattern="^confirm_upload:", block=False))
-application.add_handler(CallbackQueryHandler(cancel_upload, pattern="^cancel_upload$", block=False))
+application.add_handler(CommandHandler("upload", upload, block=False))
