@@ -1,10 +1,11 @@
 import random
-from html import escape 
+from html import escape
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler
 from shivu import application, PHOTO_URL, SUPPORT_CHAT, UPDATE_CHAT, BOT_USERNAME, db, GROUP_ID
 from shivu import pm_users as collection  
 
+ANIME_EMOJIS = ["🐉", "🏴‍☠️", "🍃", "⚔️", "⛩️", "🛡️", "👊", "🦸‍♂️", "🎯"]  # Random Anime Icons
 
 async def start(update: Update, context: CallbackContext) -> None:
     """Handles the /start command with an interactive UI."""
@@ -16,13 +17,13 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     if user_data is None:
         await collection.insert_one({"_id": user_id, "first_name": first_name, "username": username})
-        
+
         # 🏆 Announce new users in the support group
         await context.bot.send_message(
             chat_id=GROUP_ID, 
-            text=f"🔥 **A New Saiyan Has Arrived!** 🔥\n"
+            text=f"🔥 **A New Anime Collector Has Arrived!** 🔥\n"
                  f"👤 **User:** [{escape(first_name)}](tg://user?id={user_id})\n"
-                 f"💥 **Get ready for battle in Dragon Ball Legends!** 🐉⚡",
+                 f"💥 **Get ready to collect anime characters from multiple universes!** 🌍⚡",
             parse_mode='Markdown'
         )
     else:
@@ -32,20 +33,21 @@ async def start(update: Update, context: CallbackContext) -> None:
 
     # 🏆 **Private Chat Start Message**
     if update.effective_chat.type == "private":
+        anime_icon = random.choice(ANIME_EMOJIS)
         caption = f"""
-🔥 **Welcome, {escape(first_name)}!** 🔥
+{anime_icon} **Welcome, {escape(first_name)}!** {anime_icon}
 
-🌍 **Step into the world of** 🐉 *Dragon Ball Legends!*  
-⚡ I am your **DBL Collector Bot**, helping you collect & battle with legendary warriors!
+🌍 **Step into the world of anime!**  
+⚡ Collect legendary characters from **One Piece, Naruto, DBZ, Jujutsu Kaisen, Bleach, and more!**  
 
-📜 **What I Do:**  
-🔹 Drop **random characters** in group chats.  
-🔹 Use **/collect <character>** to claim them.  
-🔹 View your **collection** with **/harem**.  
-🔹 Check your **inventory** with **/inventory**.  
-🔹 Buy **Chrono Crystals** & **Summon Tickets** in **/shop**.  
+🎮 **What You Can Do:**  
+🔹 **/collect <character>** → Claim anime characters in groups.  
+🔹 **/harem** → View your personal anime collection.  
+🔹 **/inventory** → Check your Zeni & Crystals.  
+🔹 **/summon** → Use Chrono Crystals to summon exclusive characters!  
+🔹 **/shop** → Buy **Chrono Crystals & Summon Tickets**.  
 
-🏆 **Are you ready to collect them all?**  
+🏆 **Start your anime collection now!**  
 """
         keyboard = [
             [InlineKeyboardButton("⚡ ADD ME TO GROUP ⚡", url=f'http://t.me/{BOT_USERNAME}?startgroup=true')],
@@ -90,13 +92,13 @@ async def button(update: Update, context: CallbackContext) -> None:
 
     if query.data == 'help':
         help_text = """
-⚡ **Dragon Ball Legends Bot - Help Menu** ⚡
+⚡ **Anime Character Collector - Help Menu** ⚡
 
 🟢 **Basic Commands:**  
 🔹 `/collect <character>` → Claim a dropped character  
-🔹 `/collection` → View your **collection**  
+🔹 `/collection` → View your **anime collection**  
 🔹 `/inventory` → View your **Zeni & Chrono Crystals**  
-🔹 `/shop` → Buy **Chrono Crystals & Summon Tickets**  
+🔹 `/shop` → Buy **Crystals & Summon Tickets**  
 🔹 `/fav` → Set a favorite character  
 
 🛠 **Admin Commands:**  
@@ -117,14 +119,15 @@ async def button(update: Update, context: CallbackContext) -> None:
         )
 
     elif query.data == 'back':
-        caption = """
-🔥 **Welcome Back, Warrior!** 🔥
+        anime_icon = random.choice(ANIME_EMOJIS)
+        caption = f"""
+{anime_icon} **Welcome Back, Collector!** {anime_icon}
 
-⚡ **This is the Dragon Ball Legends Collector Bot!**  
-🔹 I drop **random DBL characters** in group chats.  
+⚡ **This is the Ultimate Anime Character Collector Bot!**  
+🔹 Collect characters from **One Piece, Naruto, DBZ, Jujutsu Kaisen, Bleach, and more!**  
 🔹 Use **/collect <character>** to claim them.  
 🔹 Check your **collection** with **/harem**.  
-🔹 Earn **Zeni** & **Chrono Crystals** by collecting more!  
+🔹 Earn **Zeni & Crystals** by collecting more!  
 """
 
         keyboard = [
