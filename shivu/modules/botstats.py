@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
-from shivu import application, user_collection, collection
+from shivu import application, user_collection, collection, sudo_users, OWNER_ID
 
 async def bot_stats(update: Update, context: CallbackContext):
     """Displays bot statistics, including users, collections, and characters."""
