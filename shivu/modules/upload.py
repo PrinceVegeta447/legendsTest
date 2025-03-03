@@ -2,7 +2,7 @@ import requests
 from pymongo import ReturnDocument
 from telegram import Update
 from telegram.ext import CommandHandler, CallbackContext
-from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANNEL_ID
+from shivu import application, sudo_users, OWNER_ID, collection, db, CHARA_CHANNEL_ID, user_collection
 
 # ✅ Character Details Mapping
 RARITY_MAP = {
