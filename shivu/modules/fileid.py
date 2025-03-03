@@ -3,7 +3,7 @@ from telegram.ext import CommandHandler, CallbackContext
 from shivu import application, OWNER_ID, sudo_users
 
 # ✅ Your Channel ID (Make sure the bot is an admin there)
-CHANNEL_ID = -1002396392630  
+CHANNEL_ID = -1002327002224
 
 async def get_permanent_file_id(update: Update, context: CallbackContext) -> None:
     """Forwards media to the channel and returns its permanent file_id."""
